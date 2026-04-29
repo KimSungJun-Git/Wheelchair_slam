@@ -15,5 +15,11 @@ find_package(urdf REQUIRED)
 install(DIRECTORY meshes rviz urdf
   DESTINATION share/${PROJECT_NAME}
 )
-
+install(DIRECTORY
+  launch
+  urdf
+  meshes
+  rviz
+  DESTINATION share/${PROJECT_NAME}
+)
 ament_package()

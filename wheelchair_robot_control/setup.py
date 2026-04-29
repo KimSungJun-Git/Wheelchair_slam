@@ -27,6 +27,8 @@ setup(
     entry_points={
         'console_scripts': [
             'main_controller = wheelchair_robot_control.main_controller:main',
+            'safety_stop_node = wheelchair_robot_control.safety_stop_node:main',
+            'mode_switch_node = wheelchair_robot_control.mode_switch_node:main',
         ],
     },
 )

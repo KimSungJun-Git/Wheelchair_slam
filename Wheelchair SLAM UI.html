@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wheelchair SLAM UI - 통합 시스템</title>
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+  
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <style>
+    body {
+      margin: 0; padding: 0; display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; background-color: #1a1b1e; font-family: 'Pretendard', sans-serif;
+    }
+    #root { box-shadow: 0 24px 48px rgba(0,0,0,0.4); border-radius: 12px; overflow: hidden; user-select: none; }
+    button { outline: none; -webkit-tap-highlight-color: transparent; }
+    ::-webkit-scrollbar { display: none; }
+    @keyframes actPulse {
+      0%   { transform: scale(0.8); opacity: 0.7; }
+      70%  { transform: scale(2.2); opacity: 0; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    @keyframes arrivalIn {
+      0% { transform: scale(0.85); opacity: 0; }
+      60% { transform: scale(1.04); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes arrivalRing {
+      0% { transform: scale(0.7); opacity: 0.6; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    @keyframes obstaclePulse1 { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+    @keyframes obstaclePulse2 { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+    @keyframes obstaclePulse3 { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+    @keyframes obstacleShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // ─── 1. 블루 테마 토큰 적용 (60:30:10 비율) ────────────────────────
+    const TOKENS = {
+      color: {
+        bg: '#F8FAFC', surface: '#FFFFFF', surfaceAlt: '#BFDBFE', surfaceDark: '#191970',
+        primary: '#0047AB', primaryDark: '#002F6C', primarySoft: '#BFDBFE', accent: '#3B82F6',
+        ink: '#002F6C', inkMuted: '#10367D', inkFaint: '#64748B',
+        success: '#10A571', successSoft: '#D8F1E5', warn: '#E6A100', warnSoft: '#FEF08A', danger: '#E5484D', dangerSoft: '#FEE2E2',
+        mapBg: '#F1F5F9', mapWall: '#002F6C', mapFloor: '#E2E8F0', mapPath: '#3B82F6', mapPathGhost: '#BFDBFE', mapObstacle: '#E5484D', mapRobot: '#191970',
+        line: '#BFDBFE', lineStrong: '#3B82F6',
+      },
+      radius: { sm: 8, md: 14, lg: 20, xl: 28, pill: 999 },
+      shadow: { sm: '0 1px 2px rgba(0,47,108,0.06)', md: '0 4px 14px rgba(0,47,108,0.1)', lg: '0 10px 30px rgba(0,47,108,0.15)' },
+      font: { sans: `'Pretendard', sans-serif` },
+    };
+
+    const I18N = { ko: { hello: '안녕하세요', wheresToday: '오늘은 어디로 갈까요?', caregiver: '보호자 연결됨', search: '목적지 검색', goHome: '대기소로 자동 귀환', favorites: '즐겨찾기', myRoom: '내 병실', rehab: '재활치료실', map: '실시간 맵', sos: 'SOS', startRoute: '경로 시작', manual: '수동', auto: '자율', stop: '정지', obstacle: '장애물 감지' } };
+
+    // ─── 2. Shared UI Components ──────────────────────────────────────
+    function Icon({ name, size = 20, stroke = 1.8, color = 'currentColor', style }) {
+      const paths = {
+        home: <><path d="M3 10l9-7 9 7"/><path d="M5 9v11h14V9"/></>, map: <><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></>, search: <><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></>, battery: <><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10v4"/><rect x="5" y="9" width="10" height="6" fill="currentColor" stroke="none" rx="1"/></>, signal: <><path d="M4 20h2M9 20h2v-4M14 20h2v-8M19 20h2V6"/></>, chevronRight: <path d="M9 6l6 6-6 6"/>, chevronLeft: <path d="M15 6l-6 6 6 6"/>, arrowRight: <><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></>, pin: <><path d="M12 22s-7-7.5-7-13a7 7 0 0114 0c0 5.5-7 13-7 13z"/><circle cx="12" cy="9" r="2.5"/></>, play: <path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/>, stop: <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>, sos: <><circle cx="12" cy="12" r="9"/><path d="M8 10h2v4H8zM14 10h2v4h-2zM11 10h2v4h-2z" fill="currentColor" stroke="none"/></>, bed: <><path d="M3 10V6M21 18v-5a3 3 0 00-3-3H3M3 18h18"/><circle cx="8" cy="10" r="2"/></>, alert: <><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18v.5" stroke="#fff"/></>, leaf: <><path d="M11 20A7 7 0 014 13V4h9a7 7 0 010 14z"/><path d="M11 20c-3-5-3-9 0-13"/></>
+      };
+      return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, ...style }}>{paths[name]}</svg>;
+    }
+
+    function Pill({ tone = 'neutral', icon, children, size = 'md' }) {
+      const C = TOKENS.color;
+      const tones = { neutral: { bg: C.surfaceAlt, fg: C.inkDark }, primary: { bg: C.primarySoft, fg: C.primaryDark }, success: { bg: C.successSoft, fg: C.success }, warn: { bg: C.warnSoft, fg: '#8a6500' }, danger: { bg: C.dangerSoft, fg: C.danger } };
+      const s = tones[tone] || tones.neutral;
+      const pad = size === 'lg' ? '10px 16px' : size === 'sm' ? '4px 10px' : '6px 12px';
+      return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: pad, borderRadius: TOKENS.radius.pill, background: s.bg, color: s.fg, fontSize: size === 'lg'?16:14, fontWeight: 700 }}>{icon && <Icon name={icon} size={16} stroke={2.2} />} {children}</span>;
+    }
+
+    function Card({ children, style, pad = 20, onClick }) {
+      return <div onClick={onClick} style={{ background: TOKENS.color.surface, borderRadius: TOKENS.radius.lg, boxShadow: TOKENS.shadow.sm, border: `1px solid ${TOKENS.color.line}`, padding: pad, ...style }}>{children}</div>;
+    }
+
+    function BigButton({ children, icon, tone = 'primary', onClick, subtitle }) {
+      const C = TOKENS.color;
+      const t = tone === 'primary' ? { bg: C.primary, fg: '#fff' } : tone === 'soft' ? { bg: C.primarySoft, fg: C.primaryDark } : { bg: C.surface, fg: C.ink, border: `2px solid ${C.line}` };
+      return (
+        <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 14, background: t.bg, color: t.fg, border: t.border || 'none', borderRadius: TOKENS.radius.lg, padding: '22px 26px', fontSize: 22, fontWeight: 800, fontFamily: TOKENS.font.sans, cursor: 'pointer', width: '100%', textAlign: 'left', minHeight: 80 }} onMouseDown={e => e.currentTarget.style.transform='scale(0.98)'} onMouseUp={e => e.currentTarget.style.transform=''} onMouseLeave={e => e.currentTarget.style.transform=''}>
+          {icon && <Icon name={icon} size={30} stroke={2.5} />}
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}><span>{children}</span>{subtitle && <span style={{ fontSize: 16, fontWeight: 600, opacity: 0.85 }}>{subtitle}</span>}</span>
+        </button>
+      );
+    }
+
+    function StatusBar() {
+      return (
+        <div style={{ height: 38, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px', fontSize: 14, fontWeight: 700, color: TOKENS.color.primaryDark, background: 'rgba(255,255,255,0.85)', borderBottom: `1px solid ${TOKENS.color.line}` }}>
+          <span>오후 2:34</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Icon name="signal" size={14} /><span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="battery" size={18} /><span>78%</span></span></span>
+        </div>
+      );
+    }
+
+    function Frame({ children, bg }) {
+      return <div style={{ width: 1024, height: 720, background: bg || TOKENS.color.bg, fontFamily: TOKENS.font.sans, color: TOKENS.color.ink, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>{children}</div>;
+    }
+
+    // ─── 2.5 시스템 활동 로그 (Activity Log) ──────────────────────────
+    const ActivityContext = React.createContext(null);
+
+    function ActivityProvider({ children }) {
+      const [activities, setActivities] = React.useState([]);
+      const idRef = React.useRef(1);
+
+      // status: 'active' | 'completed' | 'cancelled' | 'failed'
+      const startActivity = React.useCallback((label, meta = {}) => {
+        const id = idRef.current++;
+        setActivities(prev => [{ id, label, status: 'active', startedAt: new Date(), endedAt: null, ...meta }, ...prev].slice(0, 50));
+        return id;
+      }, []);
+
+      const updateActivity = React.useCallback((id, patch) => {
+        setActivities(prev => prev.map(a => a.id === id
+          ? { ...a, ...patch, endedAt: patch.status && patch.status !== 'active' ? new Date() : a.endedAt }
+          : a));
+      }, []);
+
+      const completeActivity = React.useCallback((id, note) => updateActivity(id, { status: 'completed', note }), [updateActivity]);
+      const cancelActivity   = React.useCallback((id, note) => updateActivity(id, { status: 'cancelled', note: note || '사용자 취소' }), [updateActivity]);
+      const failActivity     = React.useCallback((id, note) => updateActivity(id, { status: 'failed', note }), [updateActivity]);
+
+      const logEvent = React.useCallback((label, meta = {}) => {
+        const id = idRef.current++;
+        const now = new Date();
+        setActivities(prev => [{ id, label, status: 'completed', startedAt: now, endedAt: now, ...meta }, ...prev].slice(0, 50));
+        return id;
+      }, []);
+
+      const cancelAllActive = React.useCallback((note) => {
+        setActivities(prev => prev.map(a => a.status === 'active'
+          ? { ...a, status: 'cancelled', note: note || '사용자 취소', endedAt: new Date() }
+          : a));
+      }, []);
+
+      const clearAll = React.useCallback(() => setActivities([]), []);
+
+      const value = { activities, startActivity, updateActivity, completeActivity, cancelActivity, failActivity, logEvent, cancelAllActive, clearAll };
+      return <ActivityContext.Provider value={value}>{children}</ActivityContext.Provider>;
+    }
+
+    const useActivity = () => React.useContext(ActivityContext);
+
+    function fmtTime(d) {
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      const s = String(d.getSeconds()).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+    function fmtDuration(start, end) {
+      const ms = (end || new Date()) - start;
+      if (ms < 1000) return `${ms}ms`;
+      const s = Math.floor(ms / 1000);
+      if (s < 60) return `${s}s`;
+      const m = Math.floor(s / 60);
+      return `${m}m ${s % 60}s`;
+    }
+
+    function StatusDot({ status }) {
+      const C = TOKENS.color;
+      const map = {
+        active:    { bg: C.accent,   ring: 'rgba(59,130,246,0.25)', pulse: true },
+        completed: { bg: C.success,  ring: 'rgba(16,165,113,0.18)', pulse: false },
+        cancelled: { bg: C.inkFaint, ring: 'rgba(100,116,139,0.18)', pulse: false },
+        failed:    { bg: C.danger,   ring: 'rgba(229,72,77,0.2)',   pulse: false },
+      };
+      const s = map[status] || map.completed;
+      return (
+        <span style={{ position: 'relative', width: 10, height: 10, display: 'inline-block', flexShrink: 0 }}>
+          {s.pulse && <span style={{ position: 'absolute', inset: -6, borderRadius: '50%', background: s.ring, animation: 'actPulse 1.4s ease-out infinite' }} />}
+          <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: s.bg, boxShadow: `0 0 0 3px ${s.ring}` }} />
+        </span>
+      );
+    }
+
+    const STATUS_LABEL = {
+      active:    { ko: '진행 중' },
+      completed: { ko: '완료' },
+      cancelled: { ko: '취소됨' },
+      failed:    { ko: '실패' },
+    };
+
+    function ActivityRow({ entry, onCancel, now }) {
+      const C = TOKENS.color;
+      const isActive = entry.status === 'active';
+      const isCancelled = entry.status === 'cancelled';
+      const isFailed = entry.status === 'failed';
+      const borderColor = isActive ? C.accent : isCancelled ? C.inkFaint : isFailed ? C.danger : C.success;
+      const pillBg = isActive ? C.primarySoft : isCancelled ? '#E2E8F0' : isFailed ? C.dangerSoft : C.successSoft;
+      const pillFg = isActive ? C.primaryDark : isCancelled ? C.inkFaint : isFailed ? C.danger : '#0a6b4a';
+      return (
+        <div style={{
+          display: 'flex', gap: 12, padding: '12px 14px',
+          background: isActive ? 'rgba(59,130,246,0.06)' : C.surface,
+          borderLeft: `3px solid ${borderColor}`,
+          borderRadius: 10,
+          opacity: isCancelled ? 0.78 : 1,
+        }}>
+          <div style={{ paddingTop: 5 }}><StatusDot status={entry.status} /></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: C.primaryDark, textDecoration: isCancelled ? 'line-through' : 'none' }}>{entry.label}</div>
+              <div style={{ fontSize: 11, color: C.inkFaint, fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{fmtTime(entry.startedAt)}</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: pillBg, color: pillFg }}>{STATUS_LABEL[entry.status].ko}</span>
+              <span style={{ fontSize: 11, color: C.inkFaint, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                {isActive ? `+${fmtDuration(entry.startedAt, now)}` : fmtDuration(entry.startedAt, entry.endedAt)}
+              </span>
+              {entry.note && !isActive && (
+                <span style={{ fontSize: 11, color: C.inkFaint, fontWeight: 600 }}>· {entry.note}</span>
+              )}
+              {isActive && onCancel && (
+                <button onClick={() => onCancel(entry.id)} style={{
+                  marginLeft: 'auto', padding: '3px 10px', fontSize: 11, fontWeight: 800,
+                  background: C.surface, color: C.danger, border: `1.5px solid ${C.dangerSoft}`,
+                  borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+                }}>취소</button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── 2.6 확인 다이얼로그 ──────────────────────────────────────────
+    function ConfirmDialog({ open, title, message, confirmText = '확인', cancelText = '취소', tone = 'primary', onConfirm, onCancel }) {
+      if (!open) return null;
+      const C = TOKENS.color;
+      const confirmBg = tone === 'danger' ? C.danger : C.primary;
+      return (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 100,
+          background: 'rgba(0,47,108,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backdropFilter: 'blur(4px)', fontFamily: TOKENS.font.sans,
+        }}>
+          <div style={{
+            width: 460, background: C.surface, borderRadius: 24,
+            boxShadow: '0 24px 64px rgba(0,47,108,0.35)',
+            padding: 32, display: 'flex', flexDirection: 'column', gap: 16,
+          }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: C.primaryDark, letterSpacing: -0.3 }}>{title}</div>
+            <div style={{ fontSize: 17, color: C.inkMuted, fontWeight: 600, lineHeight: 1.5 }}>{message}</div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+              <button onClick={onCancel} style={{
+                flex: 1, padding: '18px', borderRadius: 16, border: `2px solid ${C.line}`,
+                background: C.surface, color: C.primaryDark, fontSize: 18, fontWeight: 800,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>{cancelText}</button>
+              <button onClick={onConfirm} style={{
+                flex: 1.3, padding: '18px', borderRadius: 16, border: 'none',
+                background: confirmBg, color: '#fff', fontSize: 18, fontWeight: 800,
+                cursor: 'pointer', fontFamily: 'inherit',
+                boxShadow: tone === 'danger' ? '0 8px 16px rgba(229,72,77,0.25)' : '0 8px 16px rgba(0,71,171,0.25)',
+              }}>{confirmText}</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ActivityPanel({ onStop }) {
+      const C = TOKENS.color;
+      const ctx = useActivity();
+      const [open, setOpen] = React.useState(false);
+      const [filter, setFilter] = React.useState('all');
+      const [now, setNow] = React.useState(Date.now());
+
+      const hasActive = ctx.activities.some(a => a.status === 'active');
+      React.useEffect(() => {
+        if (!hasActive) return;
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+      }, [hasActive]);
+
+      const counts = React.useMemo(() => {
+        const c = { all: ctx.activities.length, active: 0, completed: 0, cancelled: 0, failed: 0 };
+        ctx.activities.forEach(a => { c[a.status] = (c[a.status] || 0) + 1; });
+        return c;
+      }, [ctx.activities]);
+
+      const visible = ctx.activities.filter(a => filter === 'all' ? true : a.status === filter);
+
+      // 현재 상태 한 줄: 가장 최근 active 항목, 없으면 가장 최근 항목
+      const currentEntry = ctx.activities.find(a => a.status === 'active') || ctx.activities[0];
+      const statusText = currentEntry
+        ? (currentEntry.status === 'active'
+            ? `${currentEntry.label}  ·  +${fmtDuration(currentEntry.startedAt, now)}`
+            : `${currentEntry.label}  ·  ${STATUS_LABEL[currentEntry.status].ko}`)
+        : '대기 중';
+
+      const TabBtn = ({ k, label }) => (
+        <button onClick={() => setFilter(k)} style={{
+          padding: '6px 11px', fontSize: 12, fontWeight: 800,
+          background: filter === k ? C.primary : 'transparent',
+          color: filter === k ? '#fff' : C.inkMuted,
+          border: 'none', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}>
+          {label}
+          <span style={{
+            fontSize: 10.5, fontWeight: 800, padding: '1px 6px', borderRadius: 999,
+            background: filter === k ? 'rgba(255,255,255,0.25)' : '#E2E8F0',
+            color: filter === k ? '#fff' : C.inkMuted,
+            fontVariantNumeric: 'tabular-nums', minWidth: 16, textAlign: 'center',
+          }}>{counts[k] || 0}</span>
+        </button>
+      );
+
+      // 미니마이즈 모드: 화면 하단 좌측 한 줄, 우측에 노출되는 정지·홈·기타 버튼 가리지 않도록 좌측 정렬
+      if (!open) {
+        return (
+          <div style={{
+            position: 'absolute', right: 16, top: 50, zIndex: 60,
+            maxWidth: 360,
+            background: 'rgba(255,255,255,0.97)',
+            backdropFilter: 'blur(8px)',
+            border: `1px solid ${C.line}`,
+            borderRadius: 999,
+            boxShadow: '0 8px 24px rgba(0,47,108,0.18)',
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 14px 8px 12px',
+            fontFamily: TOKENS.font.sans,
+            cursor: 'pointer',
+          }} onClick={() => setOpen(true)}>
+            <span style={{ position: 'relative', width: 10, height: 10, flexShrink: 0 }}>
+              <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: hasActive ? C.accent : C.success }} />
+              {hasActive && <span style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: 'rgba(59,130,246,0.3)', animation: 'actPulse 1.4s ease-out infinite' }} />}
+            </span>
+            <span style={{
+              fontSize: 13, fontWeight: 800,
+              color: hasActive ? C.primaryDark : C.inkMuted,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              fontVariantNumeric: 'tabular-nums',
+            }}>
+              {statusText}
+            </span>
+            <span style={{
+              marginLeft: 4, padding: '3px 9px', fontSize: 11, fontWeight: 800,
+              background: C.surfaceAlt, color: C.primaryDark, borderRadius: 999,
+              flexShrink: 0,
+            }}>로그 열기</span>
+          </div>
+        );
+      }
+
+      return (
+        <div style={{
+          position: 'absolute', right: 16, top: 50, zIndex: 60,
+          width: 360,
+          background: 'rgba(255,255,255,0.98)',
+          backdropFilter: 'blur(8px)',
+          border: `1px solid ${C.line}`,
+          borderRadius: 18,
+          boxShadow: '0 16px 40px rgba(0,47,108,0.22)',
+          overflow: 'hidden',
+          fontFamily: TOKENS.font.sans,
+          maxHeight: 460,
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div onClick={() => setOpen(false)} style={{
+            padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10,
+            cursor: 'pointer',
+            borderBottom: `1px solid ${C.line}`,
+            background: C.surface,
+          }}>
+            <span style={{ position: 'relative', width: 10, height: 10 }}>
+              <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: hasActive ? C.accent : C.success }} />
+              {hasActive && <span style={{ position: 'absolute', inset: -4, borderRadius: '50%', background: 'rgba(59,130,246,0.3)', animation: 'actPulse 1.4s ease-out infinite' }} />}
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: C.primaryDark }}>시스템 활동</span>
+            {hasActive ? (
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.primaryDark, padding: '2px 8px', background: C.primarySoft, borderRadius: 999 }}>
+                {counts.active}건 진행 중
+              </span>
+            ) : (
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.inkFaint }}>대기</span>
+            )}
+            <span style={{ marginLeft: 'auto', color: C.inkMuted, fontSize: 16, fontWeight: 700 }}>−</span>
+          </div>
+
+          <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 4, borderBottom: `1px solid ${C.line}`, background: '#F8FAFC', overflowX: 'auto', flexShrink: 0 }}>
+            <TabBtn k="all" label="전체" />
+            <TabBtn k="active" label="진행" />
+            <TabBtn k="completed" label="완료" />
+            <TabBtn k="cancelled" label="취소" />
+            {counts.failed > 0 && <TabBtn k="failed" label="실패" />}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+              {hasActive && (
+                <button onClick={(e) => { e.stopPropagation(); ctx.cancelAllActive(); }} style={{
+                  padding: '5px 10px', fontSize: 11, fontWeight: 800,
+                  background: C.surface, color: C.danger, border: `1.5px solid ${C.dangerSoft}`,
+                  borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+                }}>모두 중지</button>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); ctx.clearAll(); }} style={{
+                padding: '5px 10px', fontSize: 11, fontWeight: 800,
+                background: 'transparent', color: C.inkMuted, border: `1.5px solid ${C.line}`,
+                borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+              }}>지우기</button>
+            </div>
+          </div>
+
+          <div style={{ overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+            {visible.length === 0 ? (
+              <div style={{ padding: '32px 16px', textAlign: 'center', color: C.inkFaint, fontSize: 13, fontWeight: 600 }}>
+                아직 기록된 동작이 없습니다.
+              </div>
+            ) : (
+              visible.map(entry => (
+                <ActivityRow key={entry.id} entry={entry} now={now} onCancel={ctx.cancelActivity} />
+              ))
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── 3. Map Component ─────────────────────────────────────────────
+    function SlamMap({ width = 800, height = 480, showPath = true, showRobot = true, robotPos = { x: 180, y: 380, heading: 0 }, pathProgress = 0.35, showObstacles = false, destination = null }) {
+      const C = TOKENS.color;
+      const pathD = 'M 180 380 L 180 240 L 400 240 L 560 240 L 680 240 L 680 150', pathLength = 720;
+      return (
+        <svg viewBox="0 0 800 480" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style={{ display: 'block', background: C.mapBg }}>
+          <rect x="0" y="0" width="800" height="480" fill={C.mapFloor} opacity="0.3" />
+          <path d="M40 40 L 760 40 L 760 440 L 40 440 Z M40 140 L 720 140 M40 340 L 720 340 M150 40 L 150 140 M300 40 L 300 140 M450 40 L 450 140 M620 40 L 620 140" fill="none" stroke={C.mapWall} strokeWidth="2.5" strokeLinecap="round" />
+          <rect x="360" y="215" width="80" height="50" fill={C.primarySoft} stroke={C.primary} strokeWidth="2" />
+          <text x="400" y="243" textAnchor="middle" fontSize="12" fill={C.primaryDark} fontWeight="800">간호스테이션</text>
+
+          {showPath && <><path d={pathD} fill="none" stroke={C.mapPathGhost} strokeWidth="6" strokeDasharray="2 10" /><path d={pathD} fill="none" stroke={C.mapPath} strokeWidth="5.5" strokeDasharray={pathLength} strokeDashoffset={pathLength * (1 - pathProgress)} /></>}
+          {destination && <g transform={`translate(${destination.x}, ${destination.y})`}><circle r="14" fill={C.accent} opacity="0.2"/><circle r="8" fill={C.accent} /></g>}
+          {showObstacles && <g transform="translate(560, 240)"><circle r="16" fill={C.danger} opacity="0.3"/><circle r="8" fill={C.danger} /></g>}
+          {showRobot && (
+            <g transform={`translate(${robotPos.x}, ${robotPos.y}) rotate(${(robotPos.heading * 180) / Math.PI})`}>
+              <circle r="20" fill={C.surface} opacity="0.9" />
+              <circle r="16" fill={C.mapRobot} />
+              <path d="M 0 -14 L 6 -2 L -6 -2 Z" fill={C.surface} />
+            </g>
+          )}
+        </svg>
+      );
+    }
+
+    // ─── 3.5 도착 모달 & 장애물 근접 표시 ───────────────────────────────
+    function ArrivalModal({ open, label, onDismiss }) {
+      const [remaining, setRemaining] = React.useState(10);
+      React.useEffect(() => {
+        if (!open) return;
+        setRemaining(10);
+        const start = Date.now();
+        const tick = setInterval(() => {
+          const left = Math.max(0, 10 - Math.floor((Date.now() - start) / 1000));
+          setRemaining(left);
+          if (left <= 0) { clearInterval(tick); onDismiss(); }
+        }, 250);
+        return () => clearInterval(tick);
+      }, [open, onDismiss]);
+      if (!open) return null;
+      const C = TOKENS.color;
+      return (
+        <div onClick={onDismiss} style={{
+          position: 'absolute', inset: 0, zIndex: 110,
+          background: 'rgba(8,28,56,0.55)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: TOKENS.font.sans, cursor: 'pointer',
+        }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            width: 560, padding: '40px 44px',
+            background: '#fff', borderRadius: 28,
+            boxShadow: '0 24px 60px rgba(0,47,108,0.35)',
+            textAlign: 'center', position: 'relative',
+            animation: 'arrivalIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            cursor: 'default',
+          }}>
+            {/* 큰 체크 아이콘 + ripple */}
+            <div style={{ width: 120, height: 120, margin: '0 auto 20px', position: 'relative' }}>
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: C.successSoft, animation: 'arrivalRing 1.6s ease-out infinite' }} />
+              <div style={{ position: 'absolute', inset: 8, borderRadius: '50%', background: C.successSoft, animation: 'arrivalRing 1.6s ease-out 0.4s infinite' }} />
+              <div style={{ position: 'absolute', inset: 16, borderRadius: '50%', background: C.success, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(16,165,113,0.35)' }}>
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11"/></svg>
+              </div>
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.success, letterSpacing: 2, marginBottom: 8 }}>도착 완료</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: C.primaryDark, marginBottom: 10, letterSpacing: -0.5 }}>
+              {label}에 도착했습니다
+            </div>
+            <div style={{ fontSize: 16, color: C.inkMuted, fontWeight: 600, marginBottom: 24, lineHeight: 1.5 }}>
+              안전하게 도착했어요. 잠시 후 홈 화면으로 이동합니다.
+            </div>
+            <button onClick={onDismiss} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '14px 28px', background: C.primary, color: '#fff',
+              border: 'none', borderRadius: 999, cursor: 'pointer',
+              fontSize: 16, fontWeight: 800, fontFamily: 'inherit',
+            }}>
+              지금 홈으로 ({remaining}s)
+            </button>
+            <div style={{ marginTop: 12, fontSize: 12, color: C.inkFaint, fontWeight: 600 }}>
+              화면을 누르면 즉시 닫힙니다
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 자동차 후방 주차 센서 스타일: 방향별로 빨강/주황/노랑 바가 점등
+    function ObstacleProximity({ obstacle }) {
+      const C = TOKENS.color;
+      // 항상 렌더링하되 obstacle 없으면 흐릿하게
+      const active = !!obstacle;
+      const dir = obstacle?.direction || null;
+      const level = obstacle?.level || 0; // 1: 멀음(노랑), 2: 중간(주황), 3: 가까움(빨강)
+      const distance = obstacle?.distance;
+
+      const dirColor = level >= 3 ? C.danger : level === 2 ? '#F97316' : '#EAB308';
+      const dirLabel = { front: '전방', frontLeft: '좌전방', frontRight: '우전방', left: '좌측', right: '우측' }[dir] || '';
+
+      // 5개 영역(좌·좌전·전·우전·우)에 대한 활성 여부
+      const isActive = (key) => active && dir === key;
+
+      // SVG 아크: 휠체어를 중심으로 5방향 부채꼴, 거리에 따라 3겹(원거리→근거리)이 점등
+      const Wedge = ({ key_, startAngle, endAngle, ring }) => {
+        // ring: 1(가장 바깥, 원거리), 2(중간), 3(가장 안쪽, 근거리)
+        const cx = 90, cy = 110;
+        const radii = { 1: [78, 92], 2: [60, 76], 3: [42, 58] };
+        const [r1, r2] = radii[ring];
+        const toRad = (d) => (d - 90) * Math.PI / 180;
+        const p1 = { x: cx + r2 * Math.cos(toRad(startAngle)), y: cy + r2 * Math.sin(toRad(startAngle)) };
+        const p2 = { x: cx + r2 * Math.cos(toRad(endAngle)),   y: cy + r2 * Math.sin(toRad(endAngle)) };
+        const p3 = { x: cx + r1 * Math.cos(toRad(endAngle)),   y: cy + r1 * Math.sin(toRad(endAngle)) };
+        const p4 = { x: cx + r1 * Math.cos(toRad(startAngle)), y: cy + r1 * Math.sin(toRad(startAngle)) };
+        const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+        const path = `M${p1.x},${p1.y} A${r2},${r2} 0 ${largeArc} 1 ${p2.x},${p2.y} L${p3.x},${p3.y} A${r1},${r1} 0 ${largeArc} 0 ${p4.x},${p4.y} Z`;
+
+        const lit = isActive(key_) && level >= ring; // ring 1은 level≥1, ring 2는 level≥2, ring 3는 level≥3
+        const ringColor = ring === 3 ? C.danger : ring === 2 ? '#F97316' : '#EAB308';
+        return (
+          <path
+            d={path}
+            fill={lit ? ringColor : '#1E293B'}
+            opacity={lit ? 1 : 0.18}
+            style={lit ? { animation: `obstaclePulse${ring} ${1 - ring * 0.2}s ease-in-out infinite` } : undefined}
+          />
+        );
+      };
+
+      return (
+        <div style={{
+          position: 'absolute', left: 16, bottom: 16, zIndex: 8,
+          background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(6px)',
+          padding: 14, borderRadius: 20,
+          border: `1px solid ${active ? dirColor : 'rgba(148,163,184,0.25)'}`,
+          boxShadow: active && level >= 3 ? `0 0 24px ${dirColor}88, 0 8px 24px rgba(0,0,0,0.3)` : '0 8px 24px rgba(0,0,0,0.25)',
+          transition: 'border-color 0.3s, box-shadow 0.3s',
+          fontFamily: TOKENS.font.sans,
+          width: 220,
+          animation: active && level >= 3 ? 'obstacleShake 0.4s ease-in-out infinite' : undefined,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1.5 }}>주변 장애물</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: active ? dirColor : '#64748B', padding: '2px 8px', borderRadius: 999, background: active ? `${dirColor}22` : 'rgba(148,163,184,0.12)' }}>
+              {active ? '감지됨' : '안전'}
+            </span>
+          </div>
+          <svg viewBox="0 0 180 140" width="100%" height="124" style={{ display: 'block' }}>
+            {/* 5 wedges × 3 rings: 좌측(-100°~-60°), 좌전(-60°~-20°), 전방(-20°~20°), 우전(20°~60°), 우측(60°~100°) */}
+            {[3, 2, 1].map(ring => (
+              <React.Fragment key={ring}>
+                <Wedge key_="left"        startAngle={-100} endAngle={-60} ring={ring} />
+                <Wedge key_="frontLeft"   startAngle={-60}  endAngle={-20} ring={ring} />
+                <Wedge key_="front"       startAngle={-20}  endAngle={20}  ring={ring} />
+                <Wedge key_="frontRight"  startAngle={20}   endAngle={60}  ring={ring} />
+                <Wedge key_="right"       startAngle={60}   endAngle={100} ring={ring} />
+              </React.Fragment>
+            ))}
+            {/* 휠체어 아이콘 (중심) */}
+            <circle cx="90" cy="110" r="14" fill="#F8FAFC" stroke="#3B82F6" strokeWidth="2" />
+            <path d="M84,108 L96,108 M85,113 L95,113" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <div style={{ marginTop: 4, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: active ? dirColor : '#64748B' }}>
+              {active ? `${dirLabel} 접근` : '주변 양호'}
+            </span>
+            {active && distance != null && (
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#F8FAFC', fontVariantNumeric: 'tabular-nums' }}>
+                {distance.toFixed(1)}m
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ─── 4. Screens (Home, Search, Nav, Alert, Joystick) ──────────────
+    function HomeScreen({ t, onSearch, onGoHome, onSOS }) {
+      return (
+        <Frame>
+          <StatusBar />
+          <div style={{ padding: '24px 28px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div><div style={{ fontSize: 18, color: TOKENS.color.inkMuted, fontWeight: 700 }}>{t.hello}, 김민지님</div><div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -0.5, marginTop: 6, color: TOKENS.color.primaryDark }}>{t.wheresToday}</div></div>
+            <div style={{ display: 'flex', gap: 10 }}><Pill tone="success" icon="signal" size="lg">{t.caregiver}</Pill></div>
+          </div>
+          <div style={{ padding: '0 28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, flex: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <BigButton icon="search" tone="primary" subtitle="병동·시설 검색하기" onClick={onSearch}>{t.search}</BigButton>
+              <BigButton icon="home" tone="soft" subtitle="대기소로 이동" onClick={onGoHome}>{t.goHome}</BigButton>
+              <Card pad={16} style={{ marginTop: 4 }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: TOKENS.color.inkMuted, marginBottom: 10 }}>{t.favorites}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button onClick={onSearch} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px', background: TOKENS.color.surfaceAlt, border: 'none', borderRadius: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                    <Icon name="bed" size={24} color={TOKENS.color.primary} />
+                    <div><div style={{ fontSize: 17, fontWeight: 800, color: TOKENS.color.primaryDark }}>{t.myRoom}</div><div style={{ fontSize: 14, color: TOKENS.color.inkMuted, fontWeight: 600 }}>302호</div></div>
+                  </button>
+                  <button onClick={onSearch} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px', background: TOKENS.color.surfaceAlt, border: 'none', borderRadius: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                    <Icon name="leaf" size={24} color={TOKENS.color.primary} />
+                    <div><div style={{ fontSize: 17, fontWeight: 800, color: TOKENS.color.primaryDark }}>{t.rehab}</div><div style={{ fontSize: 14, color: TOKENS.color.inkMuted, fontWeight: 600 }}>2층</div></div>
+                  </button>
+                </div>
+              </Card>
+            </div>
+            <Card pad={0} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', cursor: 'pointer', border: `2px solid ${TOKENS.color.line}` }} onClick={onSearch}>
+              <div style={{ padding: '14px 18px', borderBottom: `2px solid ${TOKENS.color.line}`, display: 'flex', justifyContent: 'space-between', background: TOKENS.color.surfaceAlt }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: TOKENS.color.primaryDark }}>{t.map}</span><Pill tone="primary" size="sm">실시간</Pill>
+              </div>
+              <div style={{ flex: 1, background: TOKENS.color.mapBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <SlamMap width={480} height={300} showPath={false} pathProgress={0} />
+              </div>
+            </Card>
+          </div>
+          <div style={{ padding: '16px 28px 22px' }}>
+            <button onClick={onSOS} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 28px', background: TOKENS.color.danger, color: '#fff', border: 'none', borderRadius: 999, fontSize: 19, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 16px rgba(229,72,77,0.25)' }}>
+              <Icon name="sos" size={26} stroke={2.5} /> {t.sos}
+            </button>
+          </div>
+        </Frame>
+      );
+    }
+
+    function SearchScreen({ t, onBack, onGoHome, onStartRoute }) {
+      return (
+        <Frame>
+          <StatusBar />
+          <div style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button onClick={onBack} style={{ width: 56, height: 56, borderRadius: 28, border: `2px solid ${TOKENS.color.line}`, background: TOKENS.color.surface, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="chevronLeft" size={28} color={TOKENS.color.primaryDark} /></button>
+            <button onClick={onGoHome} style={{ width: 56, height: 56, borderRadius: 28, border: `2px solid ${TOKENS.color.line}`, background: TOKENS.color.surface, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="홈으로"><Icon name="home" size={26} color={TOKENS.color.primaryDark} /></button>
+            <div style={{ fontSize: 28, fontWeight: 800, color: TOKENS.color.primaryDark, marginLeft: 4 }}>{t.search}</div>
+          </div>
+          <div style={{ padding: '0 28px', flex: 1, display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 20 }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: TOKENS.color.inkMuted, marginBottom: 12 }}>추천 목적지</div>
+              {/* Python 노드에 있는 좌표 딕셔너리 키값 ('emergency', 'room_101', 'room_102' 등)을 전달하도록 구성 */}
+              <Card pad={16} style={{ display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', border: `2px solid ${TOKENS.color.primary}` }} onClick={() => onStartRoute('emergency')}>
+                <div style={{ width: 52, height: 52, borderRadius: 16, background: TOKENS.color.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="bed" size={26} stroke={2.5} /></div>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 19, fontWeight: 800, color: TOKENS.color.primaryDark }}>응급실(Emergency)</div><div style={{ fontSize: 15, color: TOKENS.color.inkMuted, fontWeight: 600 }}>1층 서관 · 120m</div></div>
+                <Icon name="chevronRight" size={28} color={TOKENS.color.primary} />
+              </Card>
+              <div style={{ height: 10 }} />
+              <Card pad={16} style={{ display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', border: `2px solid ${TOKENS.color.line}` }} onClick={() => onStartRoute('room_101')}>
+                <div style={{ width: 52, height: 52, borderRadius: 16, background: TOKENS.color.surfaceAlt, color: TOKENS.color.primaryDark, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="bed" size={26} stroke={2.5} /></div>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 19, fontWeight: 800, color: TOKENS.color.primaryDark }}>101호</div><div style={{ fontSize: 15, color: TOKENS.color.inkMuted, fontWeight: 600 }}>2층 동관 · 65m</div></div>
+                <Icon name="chevronRight" size={28} color={TOKENS.color.inkMuted} />
+              </Card>
+            </div>
+            <Card pad={0} style={{ display: 'flex', flexDirection: 'column', border: `2px solid ${TOKENS.color.line}` }}>
+              <div style={{ flex: 1, background: TOKENS.color.mapBg }}><SlamMap width={460} height={320} showPath={true} pathProgress={0} destination={{ x: 680, y: 150, label: '목적지' }} /></div>
+              <div style={{ padding: '16px 20px', borderTop: `2px solid ${TOKENS.color.line}`, display: 'flex', alignItems: 'center', gap: 12, background: TOKENS.color.surfaceAlt }}>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 14, color: TOKENS.color.inkMuted, fontWeight: 700 }}>거리 · ETA</div><div style={{ fontSize: 22, fontWeight: 800, color: TOKENS.color.primaryDark }}>128m · 2분 20초</div></div>
+                <button onClick={() => onStartRoute('emergency')} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 28px', background: TOKENS.color.primary, color: '#fff', border: 'none', borderRadius: 999, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: TOKENS.shadow.md }}>
+                  {t.startRoute} <Icon name="arrowRight" size={24} stroke={2.5} />
+                </button>
+              </div>
+            </Card>
+          </div>
+        </Frame>
+      );
+    }
+
+    function NavScreen({ t, mode, obstacle, onBack, onGoHome, onStop, onManual, onAuto }) {
+      return (
+        <Frame bg={TOKENS.color.mapFloor}>
+          <div style={{ position: 'absolute', inset: 0, background: TOKENS.color.mapBg }}>
+            <SlamMap width={1024} height={720} showPath={true} pathProgress={0.42} destination={{ x: 680, y: 150, label: '이동중' }} robotPos={{ x: 400, y: 240, heading: 0 }} />
+          </div>
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', padding: '20px 24px', gap: 12 }}>
+            <button onClick={onBack} style={{ width: 56, height: 56, borderRadius: 28, background: 'rgba(255,255,255,0.95)', border: `2px solid ${TOKENS.color.line}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="chevronLeft" size={28} color={TOKENS.color.primaryDark} /></button>
+            <button onClick={onGoHome} style={{ width: 56, height: 56, borderRadius: 28, background: 'rgba(255,255,255,0.95)', border: `2px solid ${TOKENS.color.line}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="홈으로"><Icon name="home" size={26} color={TOKENS.color.primaryDark} /></button>
+            <Card pad={0} style={{ padding: '16px 24px', background: TOKENS.color.primary, color: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}><Icon name="pin" size={26} stroke={2.5} /> <span style={{ fontWeight: 800, fontSize: 20 }}>목적지로 이동 중</span></Card>
+          </div>
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 24, zIndex: 2, display: 'flex', justifyContent: 'center', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 12, background: 'rgba(255,255,255,0.98)', padding: 12, borderRadius: 28, boxShadow: TOKENS.shadow.lg, border: `2px solid ${TOKENS.color.line}` }}>
+              <div style={{ display: 'flex', background: TOKENS.color.surfaceAlt, borderRadius: 999, padding: 4 }}>
+                <button onClick={onManual} style={{ padding: '18px 28px', border: 'none', borderRadius: 999, background: mode === 'manual' ? TOKENS.color.primary : 'transparent', color: mode === 'manual' ? '#fff' : TOKENS.color.primaryDark, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>{t.manual}</button>
+                <button onClick={onAuto} style={{ padding: '18px 28px', border: 'none', borderRadius: 999, background: mode === 'auto' ? TOKENS.color.primary : 'transparent', color: mode === 'auto' ? '#fff' : TOKENS.color.primaryDark, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>{t.auto}</button>
+              </div>
+              <button onClick={onStop} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 32px', background: TOKENS.color.danger, color: '#fff', border: 'none', borderRadius: 999, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(229,72,77,0.3)' }}><Icon name="stop" size={22} stroke={2.5} /> {t.stop}</button>
+            </div>
+          </div>
+          <ObstacleProximity obstacle={obstacle} />
+        </Frame>
+      );
+    }
+
+    function AlertScreen({ t, onResume, onManual, onBack, onGoHome, onGoHomeBase }) {
+      return (
+        <Frame>
+          <StatusBar />
+          <div style={{ background: TOKENS.color.warnSoft, padding: '20px 32px', display: 'flex', alignItems: 'center', gap: 18, borderBottom: `2px solid ${TOKENS.color.warn}` }}>
+            <button onClick={onBack} style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${TOKENS.color.warn}`, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="chevronLeft" size={24} color={'#6b4a00'} /></button>
+            <button onClick={onGoHome} style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${TOKENS.color.warn}`, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="홈으로"><Icon name="home" size={22} color={'#6b4a00'} /></button>
+            <div style={{ width: 56, height: 56, borderRadius: 28, background: TOKENS.color.warn, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="alert" size={30} stroke={2.5} /></div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: '#6b4a00' }}>{t.obstacle} · 대기 중</div>
+          </div>
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, padding: 24 }}>
+            <Card pad={0} style={{ display: 'flex', flexDirection: 'column', border: `2px solid ${TOKENS.color.line}` }}><SlamMap width={600} height={400} showPath={true} showObstacles={true} pathProgress={0.45} destination={{ x: 680, y: 150, label: '목적지' }} robotPos={{ x: 450, y: 240, heading: 0 }} /></Card>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Card pad={24} style={{ border: `2px solid ${TOKENS.color.line}` }}>
+                <div style={{ fontSize: 16, color: TOKENS.color.inkMuted, fontWeight: 800, marginBottom: 16 }}>권장 조치</div>
+                <BigButton tone="primary" icon="check" subtitle="우회 경로로 주행 재개" onClick={onResume}>자율 주행 재개</BigButton>
+                <div style={{ height: 12 }} />
+                <BigButton tone="soft" icon="home" subtitle="직접 안전하게 조작" onClick={onManual}>{t.manual} 모드 전환</BigButton>
+                <div style={{ height: 12 }} />
+                <BigButton tone="soft" icon="home" subtitle="대기소로 자동 돌아가기" onClick={onGoHomeBase}>홈으로 이동</BigButton>
+              </Card>
+            </div>
+          </div>
+        </Frame>
+      );
+    }
+
+    // ─── 5. 수동 주행 화면 (조이스틱 & 토픽 반복 발행) ────────────────
+    function JoystickScreen({ t, onBack, onGoHome, setMode, cmdVelPub }) {
+      const C = TOKENS.color;
+      const [activeBtn, setActiveBtn] = React.useState(null);
+      const intervalRef = React.useRef(null);
+
+      // 설정 속도
+      const SPEED_LINEAR = 0.3; // m/s
+      const SPEED_ANGULAR = 0.5; // rad/s
+
+      const publishCmd = (dir) => {
+        if (!cmdVelPub) return;
+        let twist = new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} });
+        if (dir === 'fwd') twist.linear.x = SPEED_LINEAR;
+        if (dir === 'rev') twist.linear.x = -SPEED_LINEAR;
+        if (dir === 'left') twist.angular.z = SPEED_ANGULAR;
+        if (dir === 'right') twist.angular.z = -SPEED_ANGULAR;
+        cmdVelPub.publish(twist);
+      };
+
+      const startMove = (dir) => {
+        setActiveBtn(dir);
+        publishCmd(dir); // 첫 발송
+        // 누르고 있는 동안 파이썬 timeout(0.5s)에 걸리지 않게 0.1초마다 반복 전송
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(() => publishCmd(dir), 100);
+      };
+
+      const stopMove = () => {
+        setActiveBtn(null);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (cmdVelPub) {
+          cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
+        }
+      };
+
+      const bindEvents = (dir) => ({
+        onMouseDown: () => startMove(dir), onMouseUp: stopMove, onMouseLeave: stopMove,
+        onTouchStart: (e) => { e.preventDefault(); startMove(dir); }, onTouchEnd: (e) => { e.preventDefault(); stopMove(); },
+      });
+
+      return (
+        <Frame bg={C.bg}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '24px 28px', gap: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <button onClick={onBack} style={{ width: 64, height: 64, borderRadius: 32, background: C.surface, border: `2px solid ${C.lineStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <Icon name="chevronLeft" size={32} color={C.primaryDark} stroke={2.5} />
+                </button>
+                <button onClick={onGoHome} style={{ width: 64, height: 64, borderRadius: 32, background: C.surface, border: `2px solid ${C.lineStrong}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="홈으로">
+                  <Icon name="home" size={28} color={C.primaryDark} stroke={2.5} />
+                </button>
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: C.primaryDark }}>수동 주행 모드</div>
+                  <div style={{ fontSize: 16, color: C.inkMuted, fontWeight: 600, marginTop: 4 }}>화면의 큰 버튼을 눌러 직접 조작하세요.</div>
+                </div>
+              </div>
+              <button onClick={() => { setMode(); onBack(); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px 28px', background: C.primary, color: '#fff', border: 'none', borderRadius: 999, fontSize: 18, fontWeight: 800, cursor: 'pointer', width: 'fit-content', boxShadow: TOKENS.shadow.sm }}>
+                <Icon name="play" size={20} stroke={2.5} /> 자율 모드로 복귀
+              </button>
+            </div>
+            
+            <Card pad={0} style={{ width: 320, height: 180, overflow: 'hidden', border: `3px solid ${C.primarySoft}`, display: 'flex', flexDirection: 'column', boxShadow: TOKENS.shadow.md }}>
+              <div style={{ padding: '10px 16px', background: C.primaryDark, color: '#fff', fontSize: 15, fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="map" size={18} /> 주변 미니맵</span>
+                <span style={{ color: C.warnSoft, fontSize: 13 }}>수동 제어 중</span>
+              </div>
+              <div style={{ flex: 1, background: C.mapBg }}>
+                 <SlamMap width="100%" height="100%" showPath={false} robotPos={{ x: 400, y: 240, heading: -Math.PI / 2 }} />
+              </div>
+            </Card>
+          </div>
+
+          <div style={{ flex: 1, padding: '0 28px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <button {...bindEvents('fwd')} style={{ flex: 1.5, borderRadius: 32, border: 'none', background: activeBtn === 'fwd' ? C.primaryDark : C.primary, color: '#fff', fontSize: 40, fontWeight: 800, fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, cursor: 'pointer', transition: 'background 0.1s', boxShadow: activeBtn === 'fwd' ? 'inset 0 10px 20px rgba(0,0,0,0.4)' : `0 16px 40px rgba(0,71,171,0.25)` }}>
+              <Icon name="arrowRight" size={72} stroke={3} style={{ transform: 'rotate(-90deg)' }} />
+              누르고 있으면 전진
+            </button>
+
+            <div style={{ display: 'flex', gap: 20, flex: 1 }}>
+              <button {...bindEvents('left')} style={{ flex: 1, borderRadius: 28, border: `3px solid ${activeBtn === 'left' ? C.primary : C.primarySoft}`, background: activeBtn === 'left' ? C.primarySoft : C.surface, color: C.primaryDark, fontSize: 26, fontWeight: 800, fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', transition: 'all 0.1s' }}>
+                <Icon name="arrowRight" size={56} stroke={2.5} style={{ transform: 'rotate(180deg)' }} /> 왼쪽 틀기
+              </button>
+              <button {...bindEvents('rev')} style={{ flex: 1.2, borderRadius: 28, border: 'none', background: activeBtn === 'rev' ? '#c83a3f' : C.danger, color: '#fff', fontSize: 30, fontWeight: 800, fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', transition: 'background 0.1s', boxShadow: activeBtn === 'rev' ? 'inset 0 8px 16px rgba(0,0,0,0.3)' : '0 8px 24px rgba(229,72,77,0.25)' }}>
+                <Icon name="arrowRight" size={56} stroke={3} style={{ transform: 'rotate(90deg)' }} /> 누르고 있으면 후진
+              </button>
+              <button {...bindEvents('right')} style={{ flex: 1, borderRadius: 28, border: `3px solid ${activeBtn === 'right' ? C.primary : C.primarySoft}`, background: activeBtn === 'right' ? C.primarySoft : C.surface, color: C.primaryDark, fontSize: 26, fontWeight: 800, fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', transition: 'all 0.1s' }}>
+                <Icon name="arrowRight" size={56} stroke={2.5} /> 오른쪽 틀기
+              </button>
+            </div>
+          </div>
+        </Frame>
+      );
+    }
+
+    // ─── 6. Main App Component (Router & ROS Connect) ─────────────────
+    // 목적지 라벨 매핑 (활동 로그 표시용)
+    const DEST_LABELS = {
+      emergency: '응급실(Emergency)',
+      room_101: '101호',
+      room_102: '102호',
+      home: '대기소',
+    };
+
+    function AppInner() {
+      // 화면 스택: ['home'] -> ['home', 'search'] -> ['home', 'search', 'nav']
+      const [stack, setStack] = React.useState(['home']);
+      const [mode, setMode] = React.useState('manual');
+      const [rosTopics, setRosTopics] = React.useState(null);
+      const [rosConnected, setRosConnected] = React.useState(false);
+      const [confirm, setConfirm] = React.useState(null); // {title, message, tone, onConfirm}
+
+      const t = I18N['ko'];
+      const act = useActivity();
+      const actRef = React.useRef(act);
+      actRef.current = act;
+      const currentScreen = stack[stack.length - 1];
+
+      const navTaskRef = React.useRef(null);
+      const [activeDest, setActiveDest] = React.useState(null); // {key, label}
+      const [arrival, setArrival] = React.useState(null); // {label} when arrived
+      const arrivalTimerRef = React.useRef(null);
+      const [obstacle, setObstacle] = React.useState(null); // {direction: 'front'|'left'|'right'|'frontLeft'|'frontRight', level: 0-3, distance: meters}
+      const obstacleTimerRef = React.useRef(null);
+
+      // 도착 알림 시뮬레이션 (자율 주행 시작 후 자동으로 도착)
+      const scheduleArrival = (label, delayMs = 14000) => {
+        if (arrivalTimerRef.current) clearTimeout(arrivalTimerRef.current);
+        arrivalTimerRef.current = setTimeout(() => {
+          if (navTaskRef.current != null) {
+            actRef.current.completeActivity(navTaskRef.current, '목적지 도착');
+            navTaskRef.current = null;
+          }
+          setObstacle(null);
+          if (obstacleTimerRef.current) { clearInterval(obstacleTimerRef.current); obstacleTimerRef.current = null; }
+          setArrival({ label });
+        }, delayMs);
+      };
+      const cancelArrival = () => { if (arrivalTimerRef.current) { clearTimeout(arrivalTimerRef.current); arrivalTimerRef.current = null; } };
+
+      // 장애물 근접 시뮬레이션 (자율 주행 중 랜덤하게 장애물이 가까워짐/멀어짐)
+      const startObstacleSim = () => {
+        if (obstacleTimerRef.current) clearInterval(obstacleTimerRef.current);
+        const dirs = ['front', 'frontLeft', 'frontRight', 'left', 'right'];
+        let tick = 0;
+        obstacleTimerRef.current = setInterval(() => {
+          tick++;
+          // 매 4틱(2초)마다 새 장애물 시퀀스: 멀리서 점점 가까워짐
+          const phase = tick % 8;
+          if (phase === 0) {
+            const d = dirs[Math.floor(Math.random() * dirs.length)];
+            setObstacle({ direction: d, level: 1, distance: 3.5 });
+          } else if (phase === 1) setObstacle(prev => prev ? { ...prev, level: 2, distance: 2.2 } : prev);
+          else if (phase === 2) setObstacle(prev => prev ? { ...prev, level: 3, distance: 1.0 } : prev);
+          else if (phase === 3) setObstacle(prev => prev ? { ...prev, level: 2, distance: 2.0 } : prev);
+          else if (phase === 4) setObstacle(null);
+        }, 500);
+      };
+      const stopObstacleSim = () => { if (obstacleTimerRef.current) { clearInterval(obstacleTimerRef.current); obstacleTimerRef.current = null; } setObstacle(null); };
+
+      React.useEffect(() => () => { cancelArrival(); stopObstacleSim(); }, []);
+
+      React.useEffect(() => {
+        const connectId = actRef.current.startActivity('로봇 연결 시도');
+        const ros = new ROSLIB.Ros({ url: 'ws://localhost:9090' });
+        ros.on('connection', () => { setRosConnected(true); actRef.current.completeActivity(connectId, '연결 완료'); });
+        ros.on('error', () => { setRosConnected(false); actRef.current.failActivity(connectId, 'UI 테스트 모드'); });
+        ros.on('close', () => setRosConnected(false));
+
+        const destPub = new ROSLIB.Topic({ ros, name: '/destination', messageType: 'std_msgs/String' });
+        const modeSwitchPub = new ROSLIB.Topic({ ros, name: '/mode_switch', messageType: 'std_msgs/String' });
+        const cmdVelPub = new ROSLIB.Topic({ ros, name: '/cmd_vel_teleop', messageType: 'geometry_msgs/Twist' });
+        const modeSub = new ROSLIB.Topic({ ros, name: '/robot_mode', messageType: 'std_msgs/String' });
+        modeSub.subscribe((msg) => {
+          setMode(msg.data);
+          actRef.current.logEvent(`주행 모드 전환: ${msg.data === 'auto' ? '자율' : '수동'}`);
+        });
+
+        setRosTopics({ destPub, modeSwitchPub, cmdVelPub });
+        return () => { modeSub.unsubscribe(); ros.close(); };
+      }, []);
+
+      // 화면 전환 helpers
+      const pushScreen = (s) => setStack(prev => [...prev, s]);
+      const popScreen = () => setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
+      const goHomeAll = () => {
+        if (navTaskRef.current != null) {
+          act.cancelActivity(navTaskRef.current, '홈으로 복귀');
+          navTaskRef.current = null;
+        }
+        cancelArrival(); stopObstacleSim(); setActiveDest(null);
+        setStack(['home']);
+      };
+
+      const goSearch = () => pushScreen('search');
+
+      // 목적지 / 대기소 확인 다이얼로그
+      const askStartNavigation = (destName) => {
+        const label = DEST_LABELS[destName] || destName;
+        setConfirm({
+          title: `${label}(으)로 이동할까요?`,
+          message: '확인을 누르면 휠체어가 즉시 자율 주행을 시작합니다.',
+          confirmText: '네, 이동합니다',
+          cancelText: '아니오',
+          tone: 'primary',
+          onConfirm: () => {
+            setConfirm(null);
+            doStartNavigation(destName);
+          },
+        });
+      };
+
+      const askGoHomeBase = () => {
+        setConfirm({
+          title: '대기소로 자동 귀환할까요?',
+          message: '확인을 누르면 휠체어가 대기소까지 자율 주행으로 돌아갑니다.',
+          confirmText: '네, 귀환합니다',
+          cancelText: '아니오',
+          tone: 'primary',
+          onConfirm: () => {
+            setConfirm(null);
+            doGoHomeBase();
+          },
+        });
+      };
+
+      const doStartNavigation = (destName) => {
+        if (navTaskRef.current != null) act.cancelActivity(navTaskRef.current, '새 목적지 지정');
+        const label = DEST_LABELS[destName] || destName;
+        const id = act.startActivity(`자율 주행: ${label}`);
+        navTaskRef.current = id;
+        setActiveDest({ key: destName, label });
+        setMode('auto');
+        if (rosTopics) rosTopics.destPub.publish(new ROSLIB.Message({ data: destName }));
+        pushScreen('nav');
+        scheduleArrival(label, 14000);
+        startObstacleSim();
+      };
+
+      const doGoHomeBase = () => {
+        if (navTaskRef.current != null) act.cancelActivity(navTaskRef.current, '대기소 귀환으로 변경');
+        const id = act.startActivity('대기소 자동 귀환');
+        navTaskRef.current = id;
+        setActiveDest({ key: 'home_base', label: '대기소' });
+        setMode('auto');
+        if (rosTopics) rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'home' }));
+        pushScreen('nav');
+        scheduleArrival('대기소', 14000);
+        startObstacleSim();
+      };
+
+      // 네비게이션 화면에서 정지 (긴급 아님)
+      const stopNavigation = () => {
+        if (navTaskRef.current != null) {
+          act.cancelActivity(navTaskRef.current, '사용자 정지');
+          navTaskRef.current = null;
+        }
+        cancelArrival(); stopObstacleSim();
+        act.logEvent('주행 정지');
+        if (rosTopics) rosTopics.cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
+        pushScreen('alert');
+      };
+
+      // 홈 화면의 SOS = 진짜 긴급 정지
+      const triggerSOS = () => {
+        setConfirm({
+          title: 'SOS 호출을 보낼까요?',
+          message: '보호자와 관제실에 즉시 알림이 전달됩니다.',
+          confirmText: '네, 호출합니다',
+          cancelText: '아니오',
+          tone: 'danger',
+          onConfirm: () => {
+            setConfirm(null);
+            if (navTaskRef.current != null) {
+              act.cancelActivity(navTaskRef.current, '긴급 정지');
+              navTaskRef.current = null;
+            }
+            cancelArrival(); stopObstacleSim();
+            act.cancelAllActive('긴급 정지');
+            act.logEvent('🛑 SOS 긴급 호출');
+            if (rosTopics) rosTopics.cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
+            pushScreen('alert');
+          },
+        });
+      };
+
+      const resumeNav = () => {
+        const id = act.startActivity('자율 주행 재개 (우회 경로)');
+        navTaskRef.current = id;
+        setMode('auto');
+        if (activeDest) { scheduleArrival(activeDest.label, 12000); startObstacleSim(); }
+        popScreen(); // alert에서 한 단계 뒤로 (이전이 nav면 nav로)
+        if (currentScreen === 'alert' && stack[stack.length - 2] !== 'nav') pushScreen('nav');
+      };
+
+      // NavScreen에서 뒤로/홈 누르면 → 주행 취소 확인
+      const askCancelNav = (target) => () => {
+        setConfirm({
+          title: target === 'home' ? '홈으로 돌아갈까요?' : '주행을 취소할까요?',
+          message: target === 'home' ? '진행 중인 자율 주행이 취소되고 홈 화면으로 이동합니다.' : '진행 중인 자율 주행이 취소됩니다.',
+          confirmText: '네, 취소합니다',
+          cancelText: '계속 주행',
+          tone: 'warn',
+          onConfirm: () => {
+            setConfirm(null);
+            if (navTaskRef.current != null) {
+              act.cancelActivity(navTaskRef.current, target === 'home' ? '홈으로 복귀' : '사용자 취소');
+              navTaskRef.current = null;
+            }
+            cancelArrival(); stopObstacleSim(); setActiveDest(null);
+            if (rosTopics) rosTopics.cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
+            if (target === 'home') setStack(['home']);
+            else popScreen();
+          },
+        });
+      };
+
+      // NavScreen에서 수동 버튼 → 조이스틱 화면으로
+      const navToManual = () => {
+        if (navTaskRef.current != null) {
+          act.cancelActivity(navTaskRef.current, '수동 모드 전환');
+          navTaskRef.current = null;
+        }
+        cancelArrival(); stopObstacleSim();
+        setMode('manual');
+        act.logEvent('수동 주행 모드 진입');
+        if (rosTopics) rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'm' }));
+        pushScreen('joystick');
+      };
+
+      // NavScreen에서 자율 버튼 → 이미 자율이지만 명시적으로 표시
+      const navToAuto = () => {
+        if (mode !== 'auto') {
+          setMode('auto');
+          act.logEvent('자율 주행 모드 진입');
+          if (rosTopics) rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'a' }));
+        }
+      };
+
+      // 조이스틱 화면 → 자율 모드 복귀 버튼
+      const joystickToAuto = () => {
+        setMode('auto');
+        act.logEvent('자율 모드로 복귀');
+        if (rosTopics) rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'a' }));
+        popScreen();
+      };
+
+      let screen;
+      switch (currentScreen) {
+        case 'home':     screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} />; break;
+        case 'search':   screen = <SearchScreen t={t} onBack={popScreen} onGoHome={goHomeAll} onStartRoute={askStartNavigation} />; break;
+        case 'nav':      screen = <NavScreen t={t} mode={mode} obstacle={obstacle} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onStop={stopNavigation} onManual={navToManual} onAuto={navToAuto} />; break;
+        case 'alert':    screen = <AlertScreen t={t} onResume={resumeNav} onManual={navToManual} onBack={popScreen} onGoHome={goHomeAll} onGoHomeBase={askGoHomeBase} />; break;
+        case 'joystick': screen = <JoystickScreen t={t} onBack={popScreen} onGoHome={goHomeAll} setMode={joystickToAuto} cmdVelPub={rosTopics?.cmdVelPub} />; break;
+        default:         screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} />;
+      }
+      // 어디서든 정지 가능한 글로벌 정지 (진행 중 주행이 있을 때만 표시)
+      // 홈 화면에서는 SOS·보호자 pill과 충돌하므로 숨김
+      const hasActiveNav = act.activities.some(a => a.status === 'active' && (a.label.startsWith('자율 주행') || a.label.includes('대기소 자동 귀환')));
+      const showOverlays = currentScreen !== 'home' && currentScreen !== 'alert';
+
+      return (
+        <div style={{ position: 'relative' }}>
+          {screen}
+          {/* 글로벌 정지 버튼: 화면 하단 중앙(우측 상단의 보호자 pill·하단의 SOS와 겹치지 않도록 nav 화면 외엔 표시 안 함) */}
+          {hasActiveNav && showOverlays && currentScreen !== 'nav' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); stopNavigation(); }}
+              style={{
+                position: 'absolute', top: 50, right: 16, zIndex: 70,
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '12px 20px', borderRadius: 999,
+                background: TOKENS.color.danger, color: '#fff',
+                border: '2px solid rgba(255,255,255,0.9)',
+                fontSize: 16, fontWeight: 800, fontFamily: 'inherit',
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(229,72,77,0.4)',
+              }}
+              title="현재 주행 정지"
+            >
+              <Icon name="stop" size={18} stroke={2.5} /> 정지
+            </button>
+          )}
+          <ConfirmDialog
+            open={!!confirm}
+            title={confirm?.title}
+            message={confirm?.message}
+            confirmText={confirm?.confirmText}
+            cancelText={confirm?.cancelText}
+            tone={confirm?.tone}
+            onConfirm={confirm?.onConfirm}
+            onCancel={() => setConfirm(null)}
+          />
+          <ArrivalModal
+            open={!!arrival}
+            label={arrival?.label}
+            onDismiss={() => {
+              setArrival(null);
+              setActiveDest(null);
+              setStack(['home']);
+            }}
+          />
+          {currentScreen !== 'home' && <ActivityPanel />}
+        </div>
+      );
+    }
+
+    function App() {
+      return <ActivityProvider><AppInner /></ActivityProvider>;
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

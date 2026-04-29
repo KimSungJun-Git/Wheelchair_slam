@@ -1,7 +1,7 @@
 ekf_filter_node:
   ros__parameters:
     use_sim_time: false
-    frequency: 20.0  # [수정] 성준님이 기존에 쓰시던 20.0으로 맞췄습니다. 안정적입니다.
+    frequency: 20.0  
     sensor_timeout: 0.1
     two_d_mode: true
     publish_tf: true
@@ -11,21 +11,20 @@ ekf_filter_node:
     base_link_frame: base_footprint
     world_frame: odom
 
-    # 1. 엔코더 데이터 (Odometry)
     odom0: /odom
-    odom0_config: [false, false, false, # [수정] 위치(x,y)보다는 속도를 믿는 게 낫습니다.
+    odom0_config: [false, false, false, 
                    false, false, false, 
-                   true,  true,  false, # vx, vy (속도 사용)
-                   false, false, true,  # vyaw (회전 속도 사용)
-                   false, false, false]
+                   true,  false,  false, 
+                   false, false, true,  
+                   false, false, false] 
     odom0_differential: false
 
-    # 2. IMU 데이터
-    imu0: /imu/data # [수정] 토픽 이름을 성준님이 쓰시던 /imu/data로 맞췄습니다.
+    imu0: /imu/data 
     imu0_config: [false, false, false, 
-                  false, false, true,  # [수정] Yaw(회전각) 사용
+                  false, false, false,  
                   false, false, false, 
-                  false, false, true,  # 회전 속도 사용
-                  false, false, false] # [수정] ax, ay 가속도를 False로 껐습니다 (진동 방지)
+                  false, false, true, 
+                  true, false, false] 
     imu0_differential: false
+    imu0_remove_gravitational_acceleration: true
     imu0_relative: true

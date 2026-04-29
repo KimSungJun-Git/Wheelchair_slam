@@ -1,10 +1,10 @@
 amcl:
   ros__parameters:
     use_sim_time: False
-    alpha1: 0.8
+    alpha1: 0.2
     alpha2: 0.2
     alpha3: 0.2
-    alpha4: 0.8
+    alpha4: 0.2
     alpha5: 0.2
     base_frame_id: "base_footprint"
     beam_skip_distance: 0.5
@@ -31,7 +31,7 @@ amcl:
     sigma_hit: 0.2
     tf_broadcast: true
     transform_tolerance: 1.0
-    update_min_a: 0.05
+    update_min_a: 0.2
     update_min_d: 0.1
     z_hit: 0.5
     z_max: 0.05
@@ -126,7 +126,7 @@ controller_server:
       min_lookahead_dist: 0.2
       max_lookahead_dist: 0.6
       lookahead_time: 1.0
-      rotate_to_heading_angular_vel: 0.15
+      rotate_to_heading_angular_vel: 0.2
       transform_tolerance: 0.1
       use_velocity_scaled_lookahead_dist: true
       min_approach_linear_velocity: 0.05
@@ -138,7 +138,7 @@ controller_server:
       regulated_linear_scaling_min_radius: 0.1
       regulated_linear_scaling_min_speed: 0.05
       allow_reversing: false
-      max_angular_accel: 0.2
+      max_angular_accel: 0.5
       max_robot_pose_search_dist: 10.0
       
       max_linear_accel: 0.2        
@@ -164,24 +164,7 @@ local_costmap:
       height: 10
       resolution: 0.05
       footprint: "[[0.034, 0.109], [0.034, -0.109], [-0.146, -0.109], [-0.146, 0.109]]"
-      plugins: ["stvl_layer", "inflation_layer"]
-
-      stvl_layer:
-        plugin: "spatio_temporal_voxel_layer/SpatioTemporalVoxelLayer"
-        enabled: true
-        voxel_decay: 2.0     # (핵심) 2.0초 동안 잔상을 남긴 후 서서히 지움
-        decay_model: 0       # 0 = 선형(점점 희미해짐), 1 = 지수형
-        voxel_size: 0.05
-        track_unknown_space: true
-        observation_sources: scan
-        scan:
-          topic: /scan
-          data_type: "LaserScan"
-          marking: true
-          clearing: true
-          obstacle_max_range: 2.0
-          raytrace_max_range: 3.0
-
+      plugins: ["obstacle_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 0.15
@@ -305,9 +288,9 @@ behavior_server:
     transform_timeout: 0.1
     use_sim_time: False
     simulate_ahead_time: 2.0
-    max_rotational_vel: 0.15
+    max_rotational_vel: 0.3
     min_rotational_vel: 0.2
-    rotational_acc_lim: 0.2
+    rotational_acc_lim: 0.5
 velocity_smoother:
   ros__parameters:
     use_sim_time: False
