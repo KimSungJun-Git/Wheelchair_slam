@@ -45,6 +45,40 @@
   <div id="root"></div>
 
   <script type="text/babel">
+    // ─── 0. ROS / 센서 / 맵 설정 ──────────────────────────────────────
+    // 운영 환경에 맞게 조정하는 상수들. 코드 수정 없이 이 블록만 만지면 됨.
+    const ROS_CONFIG = {
+      url: 'ws://localhost:9090',  // rosbridge_websocket 주소
+    };
+
+    // 거리 임계값 (meters) — 색상 분기 기준
+    const DIST_THRESHOLDS = {
+      red: 0.5,     // <50cm: 빨강 (위험)
+      orange: 0.8,  // 50~80cm: 주황 (주의)
+      white: 1.0,   // 80~100cm: 불투명 흰색 (관심)
+      // ≥1m: 표시 안 함 (안전)
+    };
+
+    // 맵 좌표 변환 — /map 토픽이 들어오면 자동으로 갱신되는 React state로 관리.
+    //   토픽이 안 들어오면 아래 기본값 사용.
+    const DEFAULT_MAP_CONFIG = {
+      origin_x: -10.0,        // map.yaml의 origin[0]
+      origin_y: -10.0,        // map.yaml의 origin[1]
+      pixels_per_meter: 30,   // SVG 1m당 픽셀
+      svg_width: 800,
+      svg_height: 480,
+    };
+
+    // 라이다 각도 → 5방향 분류 (라이다 0rad이 정면, 반시계가 +)
+    //   휠체어 정면 ±20°가 'front', 좌측 등.
+    const LIDAR_SECTORS = [
+      { key: 'front',      from: -20, to:  20 },
+      { key: 'frontLeft',  from:  20, to:  60 },
+      { key: 'left',       from:  60, to: 100 },
+      { key: 'frontRight', from: -60, to: -20 },
+      { key: 'right',      from: -100, to: -60 },
+    ];
+
     // ─── 1. 블루 테마 토큰 적용 (60:30:10 비율) ────────────────────────
     const TOKENS = {
       color: {
@@ -428,9 +462,37 @@
     }
 
     // ─── 3. Map Component ─────────────────────────────────────────────
-    function SlamMap({ width = 800, height = 480, showPath = true, showRobot = true, robotPos = { x: 180, y: 380, heading: 0 }, pathProgress = 0.35, showObstacles = false, destination = null }) {
+    // world 좌표(meters)를 SVG 픽셀로 변환. AMCL/odom의 (x, y, yaw)를 직접 받음.
+    function worldToScreen(wx, wy, mapConfig) {
+      const px = (wx - mapConfig.origin_x) * mapConfig.pixels_per_meter;
+      // ROS는 y+가 위, SVG는 y+가 아래라 뒤집기
+      const py = mapConfig.svg_height - (wy - mapConfig.origin_y) * mapConfig.pixels_per_meter;
+      return { x: px, y: py };
+    }
+
+    function SlamMap({
+      width = 800, height = 480,
+      showPath = true, showRobot = true,
+      // robotWorld: { x, y, yaw } in meters/radians (AMCL pose)
+      // null이면 기본 위치 표시
+      robotWorld = null,
+      mapConfig = DEFAULT_MAP_CONFIG,
+      pathProgress = 0.35,
+      showObstacles = false,
+      destination = null,
+    }) {
       const C = TOKENS.color;
       const pathD = 'M 180 380 L 180 240 L 400 240 L 560 240 L 680 240 L 680 150', pathLength = 720;
+
+      // world 좌표 → 화면 픽셀 변환
+      const robotScreen = robotWorld
+        ? worldToScreen(robotWorld.x, robotWorld.y, mapConfig)
+        : { x: 180, y: 380 };
+      // ROS yaw: 반시계가 +. SVG rotate는 시계방향이 +. 그리고 y축 뒤집힘 보정.
+      const headingDeg = robotWorld
+        ? -(robotWorld.yaw * 180 / Math.PI)
+        : 0;
+
       return (
         <svg viewBox="0 0 800 480" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style={{ display: 'block', background: C.mapBg }}>
           <rect x="0" y="0" width="800" height="480" fill={C.mapFloor} opacity="0.3" />
@@ -442,7 +504,12 @@
           {destination && <g transform={`translate(${destination.x}, ${destination.y})`}><circle r="14" fill={C.accent} opacity="0.2"/><circle r="8" fill={C.accent} /></g>}
           {showObstacles && <g transform="translate(560, 240)"><circle r="16" fill={C.danger} opacity="0.3"/><circle r="8" fill={C.danger} /></g>}
           {showRobot && (
-            <g transform={`translate(${robotPos.x}, ${robotPos.y}) rotate(${(robotPos.heading * 180) / Math.PI})`}>
+            <g transform={`translate(${robotScreen.x}, ${robotScreen.y}) rotate(${headingDeg})`} style={{ transition: 'transform 0.15s linear' }}>
+              {/* 라이브 위치 펄스 (RViz 느낌) */}
+              <circle r="28" fill={C.primary} opacity="0.12">
+                <animate attributeName="r" values="22;32;22" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.18;0.06;0.18" dur="2s" repeatCount="indefinite" />
+              </circle>
               <circle r="20" fill={C.surface} opacity="0.9" />
               <circle r="16" fill={C.mapRobot} />
               <path d="M 0 -14 L 6 -2 L -6 -2 Z" fill={C.surface} />
@@ -515,23 +582,52 @@
     }
 
     // 자동차 후방 주차 센서 스타일: 방향별로 빨강/주황/노랑 바가 점등
-    function ObstacleProximity({ obstacle }) {
-      const C = TOKENS.color;
-      // 항상 렌더링하되 obstacle 없으면 흐릿하게
-      const active = !!obstacle;
-      const dir = obstacle?.direction || null;
-      const level = obstacle?.level || 0; // 1: 멀음(노랑), 2: 중간(주황), 3: 가까움(빨강)
-      const distance = obstacle?.distance;
+    // 거리(m) → 시각화 정보. 임계값 기반.
+    // null/Infinity/>= 1m 이면 inactive (회색, 흐릿)
+    function distToVisual(d) {
+      if (d == null || !isFinite(d) || d >= DIST_THRESHOLDS.white) {
+        return { active: false, color: '#1E293B', opacity: 0.18, level: 0 };
+      }
+      if (d < DIST_THRESHOLDS.red) {
+        return { active: true, color: '#E5484D', opacity: 1, level: 3 };       // 빨강
+      }
+      if (d < DIST_THRESHOLDS.orange) {
+        return { active: true, color: '#F97316', opacity: 1, level: 2 };       // 주황
+      }
+      // 0.8 ≤ d < 1.0
+      return { active: true, color: '#F8FAFC', opacity: 0.95, level: 1 };      // 불투명 흰색
+    }
 
-      const dirColor = level >= 3 ? C.danger : level === 2 ? '#F97316' : '#EAB308';
-      const dirLabel = { front: '전방', frontLeft: '좌전방', frontRight: '우전방', left: '좌측', right: '우측' }[dir] || '';
+    function ObstacleProximity({ distances }) {
+      // distances: { front, frontLeft, frontRight, left, right }  단위: meters
+      // 각 방향이 null 또는 Infinity면 안전한 것으로 간주
+      const dists = distances || {};
+      const dirs = ['left', 'frontLeft', 'front', 'frontRight', 'right'];
 
-      // 5개 영역(좌·좌전·전·우전·우)에 대한 활성 여부
-      const isActive = (key) => active && dir === key;
+      // 각 방향별 시각화 계산
+      const visuals = {};
+      let maxLevel = 0;
+      let nearestKey = null;
+      let nearestDist = Infinity;
+      dirs.forEach(k => {
+        const v = distToVisual(dists[k]);
+        visuals[k] = v;
+        if (v.level > maxLevel) maxLevel = v.level;
+        const d = dists[k];
+        if (d != null && isFinite(d) && d < nearestDist) {
+          nearestDist = d;
+          nearestKey = k;
+        }
+      });
 
-      // SVG 아크: 휠체어를 중심으로 5방향 부채꼴, 거리에 따라 3겹(원거리→근거리)이 점등
+      const active = maxLevel > 0;
+      const dirLabel = { front: '전방', frontLeft: '좌전방', frontRight: '우전방', left: '좌측', right: '우측' };
+      const dirColor = maxLevel >= 3 ? '#E5484D' : maxLevel === 2 ? '#F97316' : '#F8FAFC';
+
+      // SVG wedge: 휠체어 중심 5방향 부채꼴.
+      //   ring 1(원거리, 80~100cm), ring 2(50~80cm), ring 3(<50cm)
+      //   해당 방향 거리값이 ring 임계값 안쪽이면 그 ring이 점등됨
       const Wedge = ({ key_, startAngle, endAngle, ring }) => {
-        // ring: 1(가장 바깥, 원거리), 2(중간), 3(가장 안쪽, 근거리)
         const cx = 90, cy = 110;
         const radii = { 1: [78, 92], 2: [60, 76], 3: [42, 58] };
         const [r1, r2] = radii[ring];
@@ -543,14 +639,16 @@
         const largeArc = endAngle - startAngle > 180 ? 1 : 0;
         const path = `M${p1.x},${p1.y} A${r2},${r2} 0 ${largeArc} 1 ${p2.x},${p2.y} L${p3.x},${p3.y} A${r1},${r1} 0 ${largeArc} 0 ${p4.x},${p4.y} Z`;
 
-        const lit = isActive(key_) && level >= ring; // ring 1은 level≥1, ring 2는 level≥2, ring 3는 level≥3
-        const ringColor = ring === 3 ? C.danger : ring === 2 ? '#F97316' : '#EAB308';
+        const v = visuals[key_];
+        const lit = v.active && v.level >= ring;
+        // ring 1=흰, 2=주황, 3=빨강
+        const ringColor = ring === 3 ? '#E5484D' : ring === 2 ? '#F97316' : '#F8FAFC';
         return (
           <path
             d={path}
             fill={lit ? ringColor : '#1E293B'}
-            opacity={lit ? 1 : 0.18}
-            style={lit ? { animation: `obstaclePulse${ring} ${1 - ring * 0.2}s ease-in-out infinite` } : undefined}
+            opacity={lit ? (ring === 1 ? 0.85 : 1) : 0.18}
+            style={lit && ring >= 2 ? { animation: `obstaclePulse${ring} ${1 - ring * 0.2}s ease-in-out infinite` } : undefined}
           />
         );
       };
@@ -561,11 +659,11 @@
           background: 'rgba(15,23,42,0.92)', backdropFilter: 'blur(6px)',
           padding: 14, borderRadius: 20,
           border: `1px solid ${active ? dirColor : 'rgba(148,163,184,0.25)'}`,
-          boxShadow: active && level >= 3 ? `0 0 24px ${dirColor}88, 0 8px 24px rgba(0,0,0,0.3)` : '0 8px 24px rgba(0,0,0,0.25)',
+          boxShadow: active && maxLevel >= 3 ? `0 0 24px ${dirColor}88, 0 8px 24px rgba(0,0,0,0.3)` : '0 8px 24px rgba(0,0,0,0.25)',
           transition: 'border-color 0.3s, box-shadow 0.3s',
           fontFamily: TOKENS.font.sans,
           width: 220,
-          animation: active && level >= 3 ? 'obstacleShake 0.4s ease-in-out infinite' : undefined,
+          animation: active && maxLevel >= 3 ? 'obstacleShake 0.4s ease-in-out infinite' : undefined,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: '#94A3B8', letterSpacing: 1.5 }}>주변 장애물</span>
@@ -574,7 +672,6 @@
             </span>
           </div>
           <svg viewBox="0 0 180 140" width="100%" height="124" style={{ display: 'block' }}>
-            {/* 5 wedges × 3 rings: 좌측(-100°~-60°), 좌전(-60°~-20°), 전방(-20°~20°), 우전(20°~60°), 우측(60°~100°) */}
             {[3, 2, 1].map(ring => (
               <React.Fragment key={ring}>
                 <Wedge key_="left"        startAngle={-100} endAngle={-60} ring={ring} />
@@ -590,11 +687,11 @@
           </svg>
           <div style={{ marginTop: 4, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 800, color: active ? dirColor : '#64748B' }}>
-              {active ? `${dirLabel} 접근` : '주변 양호'}
+              {active ? `${dirLabel[nearestKey] || ''} 접근` : '주변 양호'}
             </span>
-            {active && distance != null && (
+            {active && isFinite(nearestDist) && (
               <span style={{ fontSize: 14, fontWeight: 800, color: '#F8FAFC', fontVariantNumeric: 'tabular-nums' }}>
-                {distance.toFixed(1)}m
+                {nearestDist.toFixed(2)}m
               </span>
             )}
           </div>
@@ -686,11 +783,11 @@
       );
     }
 
-    function NavScreen({ t, mode, obstacle, onBack, onGoHome, onStop, onManual, onAuto }) {
+    function NavScreen({ t, mode, distances, robotWorld, mapConfig, onBack, onGoHome, onStop, onManual, onAuto }) {
       return (
         <Frame bg={TOKENS.color.mapFloor}>
           <div style={{ position: 'absolute', inset: 0, background: TOKENS.color.mapBg }}>
-            <SlamMap width={1024} height={720} showPath={true} pathProgress={0.42} destination={{ x: 680, y: 150, label: '이동중' }} robotPos={{ x: 400, y: 240, heading: 0 }} />
+            <SlamMap width={1024} height={720} showPath={true} pathProgress={0.42} destination={{ x: 680, y: 150, label: '이동중' }} robotWorld={robotWorld} mapConfig={mapConfig} />
           </div>
           <div style={{ position: 'relative', zIndex: 2, display: 'flex', padding: '20px 24px', gap: 12 }}>
             <button onClick={onBack} style={{ width: 56, height: 56, borderRadius: 28, background: 'rgba(255,255,255,0.95)', border: `2px solid ${TOKENS.color.line}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="chevronLeft" size={28} color={TOKENS.color.primaryDark} /></button>
@@ -706,12 +803,12 @@
               <button onClick={onStop} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 32px', background: TOKENS.color.danger, color: '#fff', border: 'none', borderRadius: 999, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(229,72,77,0.3)' }}><Icon name="stop" size={22} stroke={2.5} /> {t.stop}</button>
             </div>
           </div>
-          <ObstacleProximity obstacle={obstacle} />
+          <ObstacleProximity distances={distances} />
         </Frame>
       );
     }
 
-    function AlertScreen({ t, onResume, onManual, onBack, onGoHome, onGoHomeBase }) {
+    function AlertScreen({ t, robotWorld, mapConfig, onResume, onManual, onBack, onGoHome, onGoHomeBase }) {
       return (
         <Frame>
           <StatusBar />
@@ -722,7 +819,7 @@
             <div style={{ fontSize: 24, fontWeight: 800, color: '#6b4a00' }}>{t.obstacle} · 대기 중</div>
           </div>
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20, padding: 24 }}>
-            <Card pad={0} style={{ display: 'flex', flexDirection: 'column', border: `2px solid ${TOKENS.color.line}` }}><SlamMap width={600} height={400} showPath={true} showObstacles={true} pathProgress={0.45} destination={{ x: 680, y: 150, label: '목적지' }} robotPos={{ x: 450, y: 240, heading: 0 }} /></Card>
+            <Card pad={0} style={{ display: 'flex', flexDirection: 'column', border: `2px solid ${TOKENS.color.line}` }}><SlamMap width={600} height={400} showPath={true} showObstacles={true} pathProgress={0.45} destination={{ x: 680, y: 150, label: '목적지' }} robotWorld={robotWorld} mapConfig={mapConfig} /></Card>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <Card pad={24} style={{ border: `2px solid ${TOKENS.color.line}` }}>
                 <div style={{ fontSize: 16, color: TOKENS.color.inkMuted, fontWeight: 800, marginBottom: 16 }}>권장 조치</div>
@@ -739,7 +836,7 @@
     }
 
     // ─── 5. 수동 주행 화면 (조이스틱 & 토픽 반복 발행) ────────────────
-    function JoystickScreen({ t, onBack, onGoHome, setMode, cmdVelPub }) {
+    function JoystickScreen({ t, robotWorld, mapConfig, onBack, onGoHome, setMode, cmdVelPub }) {
       const C = TOKENS.color;
       const [activeBtn, setActiveBtn] = React.useState(null);
       const intervalRef = React.useRef(null);
@@ -806,7 +903,7 @@
                 <span style={{ color: C.warnSoft, fontSize: 13 }}>수동 제어 중</span>
               </div>
               <div style={{ flex: 1, background: C.mapBg }}>
-                 <SlamMap width="100%" height="100%" showPath={false} robotPos={{ x: 400, y: 240, heading: -Math.PI / 2 }} />
+                 <SlamMap width="100%" height="100%" showPath={false} robotWorld={robotWorld} mapConfig={mapConfig} />
               </div>
             </Card>
           </div>
@@ -860,8 +957,22 @@
       const [activeDest, setActiveDest] = React.useState(null); // {key, label}
       const [arrival, setArrival] = React.useState(null); // {label} when arrived
       const arrivalTimerRef = React.useRef(null);
-      const [obstacle, setObstacle] = React.useState(null); // {direction: 'front'|'left'|'right'|'frontLeft'|'frontRight', level: 0-3, distance: meters}
-      const obstacleTimerRef = React.useRef(null);
+
+      // 실시간 센서 데이터 (실제 ROS 토픽에서 갱신)
+      // distances: 5방향 최소 거리(m). null이면 안전(>1m)으로 간주
+      const [distances, setDistances] = React.useState({
+        front: null, frontLeft: null, frontRight: null, left: null, right: null,
+      });
+      // 로봇 위치 (AMCL pose 또는 odom). null이면 SlamMap이 기본 위치 표시.
+      const [robotWorld, setRobotWorld] = React.useState(null);
+      // 맵 정보 (origin, resolution) - /map 토픽에서 자동 추출
+      const [mapConfig, setMapConfig] = React.useState(DEFAULT_MAP_CONFIG);
+      // 안전 알림 (전방 장애물 진입 시 safety_stop_node가 발행)
+      const [safetyAlert, setSafetyAlert] = React.useState(null); // 'obstacle_too_close' | 'obstacle_cleared' | 'keepout_violation'
+
+      // 5방향 거리값 누적 캐시 — 라이다·초음파 콜백이 각자 갱신
+      const lidarSectorRef = React.useRef({ front: null, frontLeft: null, frontRight: null, left: null, right: null });
+      const ultraRef = React.useRef({ front: null, left: null, right: null });
 
       // 도착 알림 시뮬레이션 (자율 주행 시작 후 자동으로 도착)
       const scheduleArrival = (label, delayMs = 14000) => {
@@ -871,53 +982,189 @@
             actRef.current.completeActivity(navTaskRef.current, '목적지 도착');
             navTaskRef.current = null;
           }
-          setObstacle(null);
-          if (obstacleTimerRef.current) { clearInterval(obstacleTimerRef.current); obstacleTimerRef.current = null; }
           setArrival({ label });
         }, delayMs);
       };
       const cancelArrival = () => { if (arrivalTimerRef.current) { clearTimeout(arrivalTimerRef.current); arrivalTimerRef.current = null; } };
 
-      // 장애물 근접 시뮬레이션 (자율 주행 중 랜덤하게 장애물이 가까워짐/멀어짐)
-      const startObstacleSim = () => {
-        if (obstacleTimerRef.current) clearInterval(obstacleTimerRef.current);
-        const dirs = ['front', 'frontLeft', 'frontRight', 'left', 'right'];
-        let tick = 0;
-        obstacleTimerRef.current = setInterval(() => {
-          tick++;
-          // 매 4틱(2초)마다 새 장애물 시퀀스: 멀리서 점점 가까워짐
-          const phase = tick % 8;
-          if (phase === 0) {
-            const d = dirs[Math.floor(Math.random() * dirs.length)];
-            setObstacle({ direction: d, level: 1, distance: 3.5 });
-          } else if (phase === 1) setObstacle(prev => prev ? { ...prev, level: 2, distance: 2.2 } : prev);
-          else if (phase === 2) setObstacle(prev => prev ? { ...prev, level: 3, distance: 1.0 } : prev);
-          else if (phase === 3) setObstacle(prev => prev ? { ...prev, level: 2, distance: 2.0 } : prev);
-          else if (phase === 4) setObstacle(null);
-        }, 500);
-      };
-      const stopObstacleSim = () => { if (obstacleTimerRef.current) { clearInterval(obstacleTimerRef.current); obstacleTimerRef.current = null; } setObstacle(null); };
+      React.useEffect(() => () => { cancelArrival(); }, []);
 
-      React.useEffect(() => () => { cancelArrival(); stopObstacleSim(); }, []);
+      // safety_alert 자동 처리: 자율 주행 중 위험 진입 시 알림 화면으로
+      React.useEffect(() => {
+        if (safetyAlert === 'obstacle_too_close') {
+          // 자율 주행 화면일 때만 자동 전환 (다른 화면이면 로그만)
+          if (currentScreen === 'nav') {
+            cancelArrival();
+            setStack(prev => [...prev, 'alert']);
+          }
+        }
+        // 알림 처리 후 비우기 (재발생 시 다시 트리거되도록)
+        if (safetyAlert) {
+          const t = setTimeout(() => setSafetyAlert(null), 100);
+          return () => clearTimeout(t);
+        }
+      }, [safetyAlert]);
+
+      // ===== 5방향 거리 통합 (라이다 + 초음파) =====
+      // 라이다 sector별 최소거리 + 초음파 좌/중/우를 결합. 더 가까운 값을 사용.
+      const recomputeDistances = () => {
+        const merged = { ...lidarSectorRef.current };
+        // 초음파는 정확하지만 정면(좁은 빔) 위주. 라이다보다 가까우면 우선.
+        const u = ultraRef.current;
+        const tighter = (a, b) => {
+          if (a == null) return b;
+          if (b == null) return a;
+          return Math.min(a, b);
+        };
+        merged.front = tighter(merged.front, u.front);
+        merged.left  = tighter(merged.left,  u.left);
+        merged.right = tighter(merged.right, u.right);
+        setDistances(merged);
+      };
 
       React.useEffect(() => {
         const connectId = actRef.current.startActivity('로봇 연결 시도');
-        const ros = new ROSLIB.Ros({ url: 'ws://localhost:9090' });
+        const ros = new ROSLIB.Ros({ url: ROS_CONFIG.url });
         ros.on('connection', () => { setRosConnected(true); actRef.current.completeActivity(connectId, '연결 완료'); });
         ros.on('error', () => { setRosConnected(false); actRef.current.failActivity(connectId, 'UI 테스트 모드'); });
         ros.on('close', () => setRosConnected(false));
 
+        // ===== Publisher =====
         const destPub = new ROSLIB.Topic({ ros, name: '/destination', messageType: 'std_msgs/String' });
         const modeSwitchPub = new ROSLIB.Topic({ ros, name: '/mode_switch', messageType: 'std_msgs/String' });
         const cmdVelPub = new ROSLIB.Topic({ ros, name: '/cmd_vel_teleop', messageType: 'geometry_msgs/Twist' });
+
+        // ===== Subscriber =====
         const modeSub = new ROSLIB.Topic({ ros, name: '/robot_mode', messageType: 'std_msgs/String' });
         modeSub.subscribe((msg) => {
           setMode(msg.data);
           actRef.current.logEvent(`주행 모드 전환: ${msg.data === 'auto' ? '자율' : '수동'}`);
         });
 
+        // --- 라이다 /scan: 5방향 sector 최소 거리 계산 ---
+        const scanSub = new ROSLIB.Topic({
+          ros, name: '/scan', messageType: 'sensor_msgs/LaserScan',
+          throttle_rate: 100,  // 10Hz로 제한 (UI 부하 감소)
+          queue_length: 1,
+        });
+        scanSub.subscribe((msg) => {
+          const { angle_min, angle_increment, ranges, range_min, range_max } = msg;
+          const sectors = { front: Infinity, frontLeft: Infinity, frontRight: Infinity, left: Infinity, right: Infinity };
+          for (let i = 0; i < ranges.length; i++) {
+            const r = ranges[i];
+            if (!isFinite(r) || r < range_min || r > range_max) continue;
+            const angDeg = (angle_min + i * angle_increment) * 180 / Math.PI;
+            // [-180, 180]로 정규화
+            let a = angDeg;
+            while (a > 180) a -= 360;
+            while (a < -180) a += 360;
+            for (const sec of LIDAR_SECTORS) {
+              if (a >= sec.from && a <= sec.to) {
+                if (r < sectors[sec.key]) sectors[sec.key] = r;
+                break;
+              }
+            }
+          }
+          // Infinity → null로 변환
+          const out = {};
+          for (const k in sectors) out[k] = isFinite(sectors[k]) ? sectors[k] : null;
+          lidarSectorRef.current = out;
+          recomputeDistances();
+        });
+
+        // --- 초음파 3개 ---
+        const ultraFrontSub = new ROSLIB.Topic({ ros, name: '/ultrasonic/range', messageType: 'sensor_msgs/Range', throttle_rate: 100, queue_length: 1 });
+        const ultraLeftSub  = new ROSLIB.Topic({ ros, name: '/ultrasonic/left',  messageType: 'sensor_msgs/Range', throttle_rate: 100, queue_length: 1 });
+        const ultraRightSub = new ROSLIB.Topic({ ros, name: '/ultrasonic/right', messageType: 'sensor_msgs/Range', throttle_rate: 100, queue_length: 1 });
+        ultraFrontSub.subscribe((msg) => { ultraRef.current.front = (msg.range > 0 && isFinite(msg.range)) ? msg.range : null; recomputeDistances(); });
+        ultraLeftSub.subscribe((msg)  => { ultraRef.current.left  = (msg.range > 0 && isFinite(msg.range)) ? msg.range : null; recomputeDistances(); });
+        ultraRightSub.subscribe((msg) => { ultraRef.current.right = (msg.range > 0 && isFinite(msg.range)) ? msg.range : null; recomputeDistances(); });
+
+        // --- AMCL pose: 로봇 실제 위치 (Nav2 사용 시) ---
+        const amclSub = new ROSLIB.Topic({
+          ros, name: '/amcl_pose', messageType: 'geometry_msgs/PoseWithCovarianceStamped',
+          throttle_rate: 100, queue_length: 1,
+        });
+        amclSub.subscribe((msg) => {
+          const p = msg.pose.pose;
+          // quaternion → yaw
+          const q = p.orientation;
+          const yaw = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+          setRobotWorld({ x: p.position.x, y: p.position.y, yaw });
+        });
+
+        // --- 백업: /odom (AMCL이 없을 때) ---
+        const odomSub = new ROSLIB.Topic({
+          ros, name: '/odometry/filtered', messageType: 'nav_msgs/Odometry',
+          throttle_rate: 200, queue_length: 1,
+        });
+        odomSub.subscribe((msg) => {
+          // AMCL이 한 번이라도 와있으면 odom으로 덮어쓰지 않음
+          // (AMCL이 더 정확한 map 좌표계)
+          setRobotWorld(prev => {
+            if (prev) return prev;  // AMCL이 있으면 유지
+            const p = msg.pose.pose;
+            const q = p.orientation;
+            const yaw = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+            return { x: p.position.x, y: p.position.y, yaw };
+          });
+        });
+
+        // --- /map: origin/resolution 자동 추출 (TRANSIENT_LOCAL latched topic) ---
+        // 한 번 받으면 MAP_CONFIG를 자동 갱신 → 사용자가 yaml 안 봐도 됨
+        const mapSub = new ROSLIB.Topic({
+          ros, name: '/map', messageType: 'nav_msgs/OccupancyGrid',
+          // latched 토픽이라 구독 즉시 한 번 발행됨
+          queue_length: 1,
+        });
+        mapSub.subscribe((msg) => {
+          const info = msg.info;
+          // 맵 전체 픽셀 너비를 SVG 너비에 맞추는 pixels_per_meter 자동 계산
+          const mapWidthMeters = info.width * info.resolution;
+          const mapHeightMeters = info.height * info.resolution;
+          // 가로/세로 중 큰 쪽이 SVG에 꽉 차도록
+          const ppm = Math.min(
+            DEFAULT_MAP_CONFIG.svg_width / mapWidthMeters,
+            DEFAULT_MAP_CONFIG.svg_height / mapHeightMeters
+          );
+          setMapConfig({
+            ...DEFAULT_MAP_CONFIG,
+            origin_x: info.origin.position.x,
+            origin_y: info.origin.position.y,
+            pixels_per_meter: ppm,
+          });
+          actRef.current.logEvent(
+            `맵 정보 자동 적용: ${info.width}×${info.height}px, ${info.resolution.toFixed(3)}m/px`
+          );
+          // 한 번 받으면 충분, 구독 해제
+          mapSub.unsubscribe();
+        });
+
+        // --- 안전 알림 (safety_stop_node) ---
+        const safetyAlertSub = new ROSLIB.Topic({ ros, name: '/safety_alert', messageType: 'std_msgs/String' });
+        safetyAlertSub.subscribe((msg) => {
+          setSafetyAlert(msg.data);
+          if (msg.data === 'obstacle_too_close') {
+            actRef.current.logEvent('⚠️ 전방 장애물 감지 - 자율 주행 중단');
+          } else if (msg.data === 'obstacle_cleared') {
+            actRef.current.logEvent('✅ 장애물 해소');
+          } else if (msg.data === 'keepout_violation') {
+            actRef.current.logEvent('🚫 금지구역 진입');
+          }
+        });
+
         setRosTopics({ destPub, modeSwitchPub, cmdVelPub });
-        return () => { modeSub.unsubscribe(); ros.close(); };
+        return () => {
+          modeSub.unsubscribe();
+          scanSub.unsubscribe();
+          ultraFrontSub.unsubscribe();
+          ultraLeftSub.unsubscribe();
+          ultraRightSub.unsubscribe();
+          amclSub.unsubscribe();
+          odomSub.unsubscribe();
+          safetyAlertSub.unsubscribe();
+          ros.close();
+        };
       }, []);
 
       // 화면 전환 helpers
@@ -928,7 +1175,7 @@
           act.cancelActivity(navTaskRef.current, '홈으로 복귀');
           navTaskRef.current = null;
         }
-        cancelArrival(); stopObstacleSim(); setActiveDest(null);
+        cancelArrival(); setActiveDest(null);
         setStack(['home']);
       };
 
@@ -974,7 +1221,7 @@
         if (rosTopics) rosTopics.destPub.publish(new ROSLIB.Message({ data: destName }));
         pushScreen('nav');
         scheduleArrival(label, 14000);
-        startObstacleSim();
+
       };
 
       const doGoHomeBase = () => {
@@ -986,7 +1233,7 @@
         if (rosTopics) rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'home' }));
         pushScreen('nav');
         scheduleArrival('대기소', 14000);
-        startObstacleSim();
+
       };
 
       // 네비게이션 화면에서 정지 (긴급 아님)
@@ -995,7 +1242,7 @@
           act.cancelActivity(navTaskRef.current, '사용자 정지');
           navTaskRef.current = null;
         }
-        cancelArrival(); stopObstacleSim();
+        cancelArrival();
         act.logEvent('주행 정지');
         if (rosTopics) rosTopics.cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
         pushScreen('alert');
@@ -1015,7 +1262,7 @@
               act.cancelActivity(navTaskRef.current, '긴급 정지');
               navTaskRef.current = null;
             }
-            cancelArrival(); stopObstacleSim();
+            cancelArrival();
             act.cancelAllActive('긴급 정지');
             act.logEvent('🛑 SOS 긴급 호출');
             if (rosTopics) rosTopics.cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
@@ -1028,13 +1275,19 @@
         const id = act.startActivity('자율 주행 재개 (우회 경로)');
         navTaskRef.current = id;
         setMode('auto');
-        if (activeDest) { scheduleArrival(activeDest.label, 12000); startObstacleSim(); }
+        if (activeDest) { scheduleArrival(activeDest.label, 12000); }
         popScreen(); // alert에서 한 단계 뒤로 (이전이 nav면 nav로)
         if (currentScreen === 'alert' && stack[stack.length - 2] !== 'nav') pushScreen('nav');
       };
 
       // NavScreen에서 뒤로/홈 누르면 → 주행 취소 확인
       const askCancelNav = (target) => () => {
+        // 진행 중인 자율 주행도, 저장된 목적지도 없으면 굳이 물어볼 것 없이 바로 동작
+        if (navTaskRef.current == null && !activeDest) {
+          if (target === 'home') setStack(['home']);
+          else popScreen();
+          return;
+        }
         setConfirm({
           title: target === 'home' ? '홈으로 돌아갈까요?' : '주행을 취소할까요?',
           message: target === 'home' ? '진행 중인 자율 주행이 취소되고 홈 화면으로 이동합니다.' : '진행 중인 자율 주행이 취소됩니다.',
@@ -1047,7 +1300,7 @@
               act.cancelActivity(navTaskRef.current, target === 'home' ? '홈으로 복귀' : '사용자 취소');
               navTaskRef.current = null;
             }
-            cancelArrival(); stopObstacleSim(); setActiveDest(null);
+            cancelArrival(); setActiveDest(null);
             if (rosTopics) rosTopics.cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
             if (target === 'home') setStack(['home']);
             else popScreen();
@@ -1061,7 +1314,7 @@
           act.cancelActivity(navTaskRef.current, '수동 모드 전환');
           navTaskRef.current = null;
         }
-        cancelArrival(); stopObstacleSim();
+        cancelArrival();
         setMode('manual');
         act.logEvent('수동 주행 모드 진입');
         if (rosTopics) rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'm' }));
@@ -1077,21 +1330,54 @@
         }
       };
 
-      // 조이스틱 화면 → 자율 모드 복귀 버튼
+      // 조이스틱 화면 → 자율 모드 복귀 버튼: 기존 목적지가 남아 있으면 같은 경로로 다시 자율 주행 시작
       const joystickToAuto = () => {
         setMode('auto');
         act.logEvent('자율 모드로 복귀');
         if (rosTopics) rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'a' }));
-        popScreen();
+        // 기존 목적지가 있으면 그 경로 그대로 자율 주행 재개
+        if (activeDest) {
+          if (navTaskRef.current != null) act.cancelActivity(navTaskRef.current, '재개');
+          const id = act.startActivity(`자율 주행 재개: ${activeDest.label}`);
+          navTaskRef.current = id;
+          if (rosTopics) {
+            if (activeDest.key === 'home_base') rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'home' }));
+            else rosTopics.destPub.publish(new ROSLIB.Message({ data: activeDest.key }));
+          }
+          scheduleArrival(activeDest.label, 12000);
+          // 자율 주행 진행 중에는 nav 화면으로 보장: stack에서 joystick 제거 후 nav가 맨 위가 되게
+          setStack(prev => {
+            const withoutJoystick = prev.filter(s => s !== 'joystick');
+            if (withoutJoystick[withoutJoystick.length - 1] === 'nav') return withoutJoystick;
+            return [...withoutJoystick, 'nav'];
+          });
+        } else {
+          // 목적지 없으면 단순 뒤로
+          popScreen();
+        }
+      };
+
+      // 어디서든 수동조작으로 가는 글로벌 핸들러: 진행 중 자율 주행 작업은 취소하지만 activeDest는 유지
+      const goToManualAnywhere = () => {
+        if (navTaskRef.current != null) {
+          act.cancelActivity(navTaskRef.current, '수동 조작 전환');
+          navTaskRef.current = null;
+        }
+        cancelArrival();
+        setMode('manual');
+        act.logEvent('수동 주행 모드 진입');
+        if (rosTopics) rosTopics.modeSwitchPub.publish(new ROSLIB.Message({ data: 'm' }));
+        // 이미 joystick이면 그대로, 아니면 push
+        setStack(prev => prev[prev.length - 1] === 'joystick' ? prev : [...prev, 'joystick']);
       };
 
       let screen;
       switch (currentScreen) {
         case 'home':     screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} />; break;
         case 'search':   screen = <SearchScreen t={t} onBack={popScreen} onGoHome={goHomeAll} onStartRoute={askStartNavigation} />; break;
-        case 'nav':      screen = <NavScreen t={t} mode={mode} obstacle={obstacle} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onStop={stopNavigation} onManual={navToManual} onAuto={navToAuto} />; break;
-        case 'alert':    screen = <AlertScreen t={t} onResume={resumeNav} onManual={navToManual} onBack={popScreen} onGoHome={goHomeAll} onGoHomeBase={askGoHomeBase} />; break;
-        case 'joystick': screen = <JoystickScreen t={t} onBack={popScreen} onGoHome={goHomeAll} setMode={joystickToAuto} cmdVelPub={rosTopics?.cmdVelPub} />; break;
+        case 'nav':      screen = <NavScreen t={t} mode={mode} distances={distances} robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onStop={stopNavigation} onManual={navToManual} onAuto={navToAuto} />; break;
+        case 'alert':    screen = <AlertScreen t={t} robotWorld={robotWorld} mapConfig={mapConfig} onResume={resumeNav} onManual={navToManual} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onGoHomeBase={askGoHomeBase} />; break;
+        case 'joystick': screen = <JoystickScreen t={t} robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} setMode={joystickToAuto} cmdVelPub={rosTopics?.cmdVelPub} />; break;
         default:         screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} />;
       }
       // 어디서든 정지 가능한 글로벌 정지 (진행 중 주행이 있을 때만 표시)
@@ -1102,6 +1388,20 @@
       return (
         <div style={{ position: 'relative' }}>
           {screen}
+          {/* ROS 연결 끊김 배너 - 의료기기 안전 표준상 통신 단절은 명시적으로 표시 */}
+          {!rosConnected && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, zIndex: 80,
+              padding: '6px 16px',
+              background: 'rgba(229, 72, 77, 0.95)',
+              color: '#fff',
+              fontSize: 12, fontWeight: 800, fontFamily: TOKENS.font.sans,
+              textAlign: 'center',
+              letterSpacing: 0.5,
+            }}>
+              ⚠️ 로봇 통신 끊김 — 화면 정보가 실시간이 아닐 수 있습니다
+            </div>
+          )}
           {/* 글로벌 정지 버튼: 화면 하단 중앙(우측 상단의 보호자 pill·하단의 SOS와 겹치지 않도록 nav 화면 외엔 표시 안 함) */}
           {hasActiveNav && showOverlays && currentScreen !== 'nav' && (
             <button
@@ -1119,6 +1419,33 @@
               title="현재 주행 정지"
             >
               <Icon name="stop" size={18} stroke={2.5} /> 정지
+            </button>
+          )}
+          {/* 글로벌 수동조작 버튼: 자체 수동 진입점이 없는 home·search 화면에서만 표시.
+              - nav: 하단 중앙 토글에 [수동] 버튼이 있음 → 중복 방지
+              - alert: 권장 조치 카드에 [수동 모드 전환] BigButton이 있음 → 중복 방지
+              - joystick: 이미 수동 화면이라 의미 없음
+              - home: SOS가 좌측 하단에 있으므로 우측 하단에 배치
+              - search: 좌측 하단이 비어 있어 좌측 하단에 배치 */}
+          {(currentScreen === 'home' || currentScreen === 'search') && (
+            <button
+              onClick={(e) => { e.stopPropagation(); goToManualAnywhere(); }}
+              style={{
+                position: 'absolute',
+                bottom: 24,
+                ...(currentScreen === 'home' ? { right: 24 } : { left: 24 }),
+                zIndex: 70,
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '14px 22px', borderRadius: 999,
+                background: '#fff', color: TOKENS.color.primaryDark,
+                border: `2px solid ${TOKENS.color.primaryDark}`,
+                fontSize: 16, fontWeight: 800, fontFamily: 'inherit',
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(0,47,108,0.18)',
+              }}
+              title="수동 조작으로 전환"
+            >
+              <Icon name="play" size={18} stroke={2.5} /> 수동조작
             </button>
           )}
           <ConfirmDialog

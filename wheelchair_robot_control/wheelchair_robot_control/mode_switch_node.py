@@ -234,10 +234,28 @@ class ModeSwitchNode(Node):
     # ===== 안전 알림 처리 =====
     def safety_alert_callback(self, msg):
         if msg.data == 'keepout_violation':
-            self.get_logger().error('금지구역 진입 알림 → Nav2 goal 취소')
+            self.get_logger().error('🚫 금지구역 진입 → Nav2 goal 취소 + 수동 전환')
             self.cancel_nav()
             self.mode = 'manual'
             self.cmd_pub.publish(Twist())
+    
+        elif msg.data == 'obstacle_too_close':
+            # 자율 모드 중일 때만 처리 (수동 모드면 이미 사용자가 조작 중)
+            if self.mode == 'auto':
+                self.get_logger().error(
+                    '⚠️ 전방 장애물 감지 → Nav2 goal 취소 + 수동 모드 전환\n'
+                    '    탑승자: 직접 회피 후 [m] 키로 자율 모드 재시작 가능')
+                self.cancel_nav()
+                self.mode = 'manual'
+                self.cmd_pub.publish(Twist())
+            else:
+                self.get_logger().warn(
+                    '⚠️ 전방 장애물 (수동 모드 중) — 직접 조작으로 회피하세요')
+    
+        elif msg.data == 'obstacle_cleared':
+            # 정보용 로그만, 자동 재시작 안 함 (사용자가 결정)
+            self.get_logger().info(
+                '✅ 전방 장애물 해소. 자율주행 재시작하려면 [m] 키 입력')
 
     # ===== 기존 기능 =====
     def goal_cb(self, msg: PoseStamped):
