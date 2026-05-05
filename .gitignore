@@ -1,0 +1,10 @@
+# 빌드 및 로그 폴더 제외
+build/
+install/
+log/
+
+# 특정 데이터 폴더 제외
+driving_data/
+
+# 특정 소스 패키지 제외
+src/wheelchair_core/

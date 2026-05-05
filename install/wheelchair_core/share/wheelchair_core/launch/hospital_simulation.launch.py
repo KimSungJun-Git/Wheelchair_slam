@@ -1,1 +1,0 @@
-/home/kim/wheelchair_ws/build/wheelchair_core/launch/hospital_simulation.launch.py

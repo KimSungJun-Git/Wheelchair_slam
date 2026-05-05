@@ -1,9 +1,0 @@
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/uninstall.dir
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/wheelchair_robot_navigation2_uninstall.dir
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/test.dir
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/edit_cache.dir
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/rebuild_cache.dir
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/list_install_components.dir
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/install.dir
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/install/local.dir
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/CMakeFiles/install/strip.dir

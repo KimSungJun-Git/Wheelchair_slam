@@ -1,1 +1,0 @@
-/home/kim/wheelchair_ws/build/wheelchair_robot_control/wheelchair_robot_control/mode_switch_node.py

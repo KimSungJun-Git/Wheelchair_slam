@@ -1,3 +1,0 @@
-[console_scripts]
-teleop_keyboard = wheelchair_robot_teleop.script.teleop_keyboard:main
-

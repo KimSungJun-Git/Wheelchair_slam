@@ -1,1 +1,0 @@
-/home/kim/wheelchair_ws/src/wheelchair_robot/wheelchair_robot_navigation2/launch/keepout_filter.launch.py

@@ -1,1 +1,0 @@
-/home/kim/wheelchair_ws/build/wheelchair_core/config/turtlebot3_lds_2d.lua

@@ -1,9 +1,0 @@
-source;share/wheelchair_core/hook/pythonpath.ps1
-source;share/wheelchair_core/hook/pythonpath.dsv
-source;share/wheelchair_core/hook/pythonpath.sh
-source;share/wheelchair_core/hook/ament_prefix_path.ps1
-source;share/wheelchair_core/hook/ament_prefix_path.dsv
-source;share/wheelchair_core/hook/ament_prefix_path.sh
-source;../../build/wheelchair_core/share/wheelchair_core/hook/pythonpath_develop.ps1
-source;../../build/wheelchair_core/share/wheelchair_core/hook/pythonpath_develop.dsv
-source;../../build/wheelchair_core/share/wheelchair_core/hook/pythonpath_develop.sh

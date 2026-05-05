@@ -1,1 +1,0 @@
-/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2/ament_cmake_core/wheelchair_robot_navigation2Config.cmake
