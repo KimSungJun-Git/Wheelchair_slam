@@ -1,0 +1,11 @@
+[console_scripts]
+Nav_go_to_pose = wheelchair_core.Nav_go_to_pose:main
+mode_manager = wheelchair_core.wheelchair_mode_manager:main
+mode_switch_node = wheelchair_core.mode_switch_node:main
+precision_docking = wheelchair_core.precision_docking_node:main
+safety_bumper = wheelchair_core.safety_bumper_node:main
+safety_stop_node = wheelchair_core.safety_stop_node:main
+scenario_manager = wheelchair_core.scenario_manager_node:main
+telegram_robot = wheelchair_core.telegram_robot:main
+teleop_keyboard = wheelchair_core.teleop_keyboard:main
+

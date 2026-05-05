@@ -1,0 +1,40 @@
+running egg_info
+creating ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info
+writing ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/PKG-INFO
+writing dependency_links to ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/dependency_links.txt
+writing entry points to ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/entry_points.txt
+writing requirements to ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/requires.txt
+writing top-level names to ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/top_level.txt
+writing manifest file '../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/SOURCES.txt'
+reading manifest file '../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/SOURCES.txt'
+writing manifest file '../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build
+creating /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib
+creating /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai
+copying wheelchair_robot_ai/log_collector_node.py -> /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai
+copying wheelchair_robot_ai/__init__.py -> /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai
+copying wheelchair_robot_ai/agent_analyzer.py -> /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai
+running install
+running install_lib
+creating /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai
+copying /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai/log_collector_node.py -> /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai
+copying /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai/__init__.py -> /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai
+copying /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai/agent_analyzer.py -> /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai
+byte-compiling /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai/log_collector_node.py to log_collector_node.cpython-310.pyc
+byte-compiling /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai/agent_analyzer.py to agent_analyzer.cpython-310.pyc
+running install_data
+creating /home/kim/wheelchair_ws/install/wheelchair_robot_ai/share/ament_index
+creating /home/kim/wheelchair_ws/install/wheelchair_robot_ai/share/ament_index/resource_index
+creating /home/kim/wheelchair_ws/install/wheelchair_robot_ai/share/ament_index/resource_index/packages
+copying resource/wheelchair_robot_ai -> /home/kim/wheelchair_ws/install/wheelchair_robot_ai/share/ament_index/resource_index/packages
+copying package.xml -> /home/kim/wheelchair_ws/install/wheelchair_robot_ai/share/wheelchair_robot_ai
+creating /home/kim/wheelchair_ws/install/wheelchair_robot_ai/share/wheelchair_robot_ai/launch
+running install_egg_info
+Copying ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info to /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai-0.0.0-py3.10.egg-info
+running install_scripts
+Installing agent_analyzer script to /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/wheelchair_robot_ai
+Installing log_collector_node script to /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/wheelchair_robot_ai
+writing list of installed files to '/home/kim/wheelchair_ws/build/wheelchair_robot_ai/install.log'

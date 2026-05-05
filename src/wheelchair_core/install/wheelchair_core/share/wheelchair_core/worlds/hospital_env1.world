@@ -1,0 +1,110 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="hospital_env">
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- 외벽 (3m x 3m 내외) -->
+    <model name="wall_outer_1">
+      <pose>0 1.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>3.1 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>3.1 0.1 1</size></box></geometry>
+          <material><script><name>Gazebo/Grey</name></script></material>
+        </visual>
+      </link>
+      <static>true</static>
+    </model>
+    <model name="wall_outer_2">
+      <pose>0 -1.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>3.1 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>3.1 0.1 1</size></box></geometry>
+          <material><script><name>Gazebo/Grey</name></script></material>
+        </visual>
+      </link>
+      <static>true</static>
+    </model>
+    <model name="wall_outer_3">
+      <pose>1.5 0 0.5 0 0 1.5708</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>3.1 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>3.1 0.1 1</size></box></geometry>
+          <material><script><name>Gazebo/Grey</name></script></material>
+        </visual>
+      </link>
+      <static>true</static>
+    </model>
+    <model name="wall_outer_4">
+      <pose>-1.5 0 0.5 0 0 1.5708</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>3.1 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>3.1 0.1 1</size></box></geometry>
+          <material><script><name>Gazebo/Grey</name></script></material>
+        </visual>
+      </link>
+      <static>true</static>
+    </model>
+
+    <!-- 복도용 칸막이 벽 -->
+    <model name="wall_inner">
+      <pose>0 -0.5 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>2 0.1 1</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>2 0.1 1</size></box></geometry>
+          <material><script><name>Gazebo/White</name></script></material>
+        </visual>
+      </link>
+      <static>true</static>
+    </model>
+
+    <!-- ⭐️ 시나리오 2 핵심: 라이다 사각지대용 스텔스 장애물 (높이 30cm, 반지름 10cm로 축소) -->
+    <model name="obstacle_person">
+      <pose>0 -1.0 0.15 0 0 0</pose> 
+      <link name="link">
+        <!-- 기존 radius 0.2에서 0.1로 50% 축소 -->
+        <collision name="collision"><geometry><cylinder><radius>0.1</radius><length>0.3</length></cylinder></geometry></collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.1</radius><length>0.3</length></cylinder></geometry>
+          <material><script><name>Gazebo/Red</name></script></material>
+        </visual>
+      </link>
+      <static>true</static>
+    </model>
+
+    <!-- 시나리오 3 병실 및 침대 -->
+    <model name="hospital_bed">
+      <pose>1.0 0.5 0.3 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.8 1.5 0.6</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.8 1.5 0.6</size></box></geometry>
+          <material><script><name>Gazebo/White</name></script></material>
+        </visual>
+      </link>
+      <static>true</static>
+    </model>
+
+    <!-- 시나리오 3 도킹 목표 지점 (ArUco 마커 대용) -->
+    <model name="docking_target">
+      <pose>0.5 0.5 0.3 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>0.1 0.4 0.4</size></box></geometry></collision>
+        <visual name="visual">
+          <geometry><box><size>0.1 0.4 0.4</size></box></geometry>
+          <material><script><name>Gazebo/Blue</name></script></material>
+        </visual>
+      </link>
+      <static>true</static>
+    </model>
+  </world>
+</sdf>

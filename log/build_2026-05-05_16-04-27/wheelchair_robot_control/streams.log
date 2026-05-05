@@ -1,0 +1,21 @@
+[2.569s] Invoking command in '/home/kim/wheelchair_ws/build/wheelchair_robot_control': PYTHONPATH=/home/kim/wheelchair_ws/build/wheelchair_robot_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/kim/wheelchair_ws/install/wheelchair_robot_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/kim/wheelchair_ws/build/wheelchair_robot_control/build --no-deps symlink_data
+[3.005s] running develop
+[3.352s] running egg_info
+[3.352s] writing wheelchair_robot_control.egg-info/PKG-INFO
+[3.352s] writing dependency_links to wheelchair_robot_control.egg-info/dependency_links.txt
+[3.352s] writing entry points to wheelchair_robot_control.egg-info/entry_points.txt
+[3.353s] writing requirements to wheelchair_robot_control.egg-info/requires.txt
+[3.353s] writing top-level names to wheelchair_robot_control.egg-info/top_level.txt
+[3.355s] reading manifest file 'wheelchair_robot_control.egg-info/SOURCES.txt'
+[3.356s] writing manifest file 'wheelchair_robot_control.egg-info/SOURCES.txt'
+[3.416s] running build_ext
+[3.417s] Creating /home/kim/wheelchair_ws/install/wheelchair_robot_control/lib/python3.10/site-packages/wheelchair-robot-control.egg-link (link to .)
+[3.418s] Installing imu_safety_node script to /home/kim/wheelchair_ws/install/wheelchair_robot_control/lib/wheelchair_robot_control
+[3.418s] Installing localization_monitor_node script to /home/kim/wheelchair_ws/install/wheelchair_robot_control/lib/wheelchair_robot_control
+[3.418s] Installing main_controller script to /home/kim/wheelchair_ws/install/wheelchair_robot_control/lib/wheelchair_robot_control
+[3.418s] Installing mode_switch_node script to /home/kim/wheelchair_ws/install/wheelchair_robot_control/lib/wheelchair_robot_control
+[3.418s] Installing safety_stop_node script to /home/kim/wheelchair_ws/install/wheelchair_robot_control/lib/wheelchair_robot_control
+[3.419s] 
+[3.419s] Installed /home/kim/wheelchair_ws/build/wheelchair_robot_control
+[3.419s] running symlink_data
+[3.465s] Invoked command in '/home/kim/wheelchair_ws/build/wheelchair_robot_control' returned '0': PYTHONPATH=/home/kim/wheelchair_ws/build/wheelchair_robot_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/kim/wheelchair_ws/install/wheelchair_robot_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/kim/wheelchair_ws/build/wheelchair_robot_control/build --no-deps symlink_data

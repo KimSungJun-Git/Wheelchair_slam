@@ -1,0 +1,15 @@
+running develop
+running egg_info
+writing wheelchair_robot_teleop.egg-info/PKG-INFO
+writing dependency_links to wheelchair_robot_teleop.egg-info/dependency_links.txt
+writing entry points to wheelchair_robot_teleop.egg-info/entry_points.txt
+writing requirements to wheelchair_robot_teleop.egg-info/requires.txt
+writing top-level names to wheelchair_robot_teleop.egg-info/top_level.txt
+reading manifest file 'wheelchair_robot_teleop.egg-info/SOURCES.txt'
+writing manifest file 'wheelchair_robot_teleop.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/kim/wheelchair_ws/install/wheelchair_robot_teleop/lib/python3.10/site-packages/wheelchair-robot-teleop.egg-link (link to .)
+Installing teleop_keyboard script to /home/kim/wheelchair_ws/install/wheelchair_robot_teleop/lib/wheelchair_robot_teleop
+
+Installed /home/kim/wheelchair_ws/build/wheelchair_robot_teleop
+running symlink_data

@@ -1,0 +1,23 @@
+running develop
+running egg_info
+writing wheelchair_core.egg-info/PKG-INFO
+writing dependency_links to wheelchair_core.egg-info/dependency_links.txt
+writing entry points to wheelchair_core.egg-info/entry_points.txt
+writing requirements to wheelchair_core.egg-info/requires.txt
+writing top-level names to wheelchair_core.egg-info/top_level.txt
+reading manifest file 'wheelchair_core.egg-info/SOURCES.txt'
+writing manifest file 'wheelchair_core.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/kim/wheelchair_ws/install/wheelchair_core/lib/python3.10/site-packages/wheelchair-core.egg-link (link to .)
+Installing Nav_go_to_pose script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+Installing mode_manager script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+Installing mode_switch_node script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+Installing precision_docking script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+Installing safety_bumper script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+Installing safety_stop_node script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+Installing scenario_manager script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+Installing telegram_robot script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+Installing teleop_keyboard script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+
+Installed /home/kim/wheelchair_ws/build/wheelchair_core
+running symlink_data

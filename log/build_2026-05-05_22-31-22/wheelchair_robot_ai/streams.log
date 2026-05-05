@@ -1,0 +1,25 @@
+[0.711s] Invoking command in '/home/kim/wheelchair_ws/src/wheelchair_robot/wheelchair_robot_ai': PYTHONPATH=/home/kim/wheelchair_ws/build/wheelchair_robot_ai/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/wheelchair_robot_ai build --build-base /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build install --record /home/kim/wheelchair_ws/build/wheelchair_robot_ai/install.log --single-version-externally-managed install_data
+[0.944s] running egg_info
+[0.945s] writing ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/PKG-INFO
+[0.945s] writing dependency_links to ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/dependency_links.txt
+[0.945s] writing entry points to ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/entry_points.txt
+[0.945s] writing requirements to ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/requires.txt
+[0.945s] writing top-level names to ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/top_level.txt
+[0.947s] reading manifest file '../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/SOURCES.txt'
+[0.948s] writing manifest file '../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info/SOURCES.txt'
+[0.948s] running build
+[0.948s] running build_py
+[0.949s] copying wheelchair_robot_ai/agent_analyzer.py -> /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai
+[0.949s] running install
+[0.949s] running install_lib
+[0.950s] copying /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build/lib/wheelchair_robot_ai/agent_analyzer.py -> /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai
+[0.950s] byte-compiling /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai/agent_analyzer.py to agent_analyzer.cpython-310.pyc
+[0.951s] running install_data
+[0.951s] running install_egg_info
+[0.953s] removing '/home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai-0.0.0-py3.10.egg-info' (and everything under it)
+[0.953s] Copying ../../../build/wheelchair_robot_ai/wheelchair_robot_ai.egg-info to /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages/wheelchair_robot_ai-0.0.0-py3.10.egg-info
+[0.954s] running install_scripts
+[0.970s] Installing agent_analyzer script to /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/wheelchair_robot_ai
+[0.970s] Installing log_collector_node script to /home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/wheelchair_robot_ai
+[0.970s] writing list of installed files to '/home/kim/wheelchair_ws/build/wheelchair_robot_ai/install.log'
+[0.987s] Invoked command in '/home/kim/wheelchair_ws/src/wheelchair_robot/wheelchair_robot_ai' returned '0': PYTHONPATH=/home/kim/wheelchair_ws/build/wheelchair_robot_ai/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/kim/wheelchair_ws/install/wheelchair_robot_ai/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../build/wheelchair_robot_ai build --build-base /home/kim/wheelchair_ws/build/wheelchair_robot_ai/build install --record /home/kim/wheelchair_ws/build/wheelchair_robot_ai/install.log --single-version-externally-managed install_data

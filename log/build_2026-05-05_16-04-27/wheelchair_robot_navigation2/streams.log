@@ -1,0 +1,33 @@
+[1.323s] Invoking command in '/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kim/wheelchair_ws/install/wheelchair_robot_ai:/home/kim/wheelchair_ws/install/wheelchair_robot_teleop:/home/kim/wheelchair_ws/install/wheelchair_robot_control:/home/kim/wheelchair_ws/install/wheelchair_core:/opt/ros/humble /usr/bin/cmake --build /home/kim/wheelchair_ws/build/wheelchair_robot_navigation2 -- -j12 -l12
+[1.790s] Invoked command in '/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kim/wheelchair_ws/install/wheelchair_robot_ai:/home/kim/wheelchair_ws/install/wheelchair_robot_teleop:/home/kim/wheelchair_ws/install/wheelchair_robot_control:/home/kim/wheelchair_ws/install/wheelchair_core:/opt/ros/humble /usr/bin/cmake --build /home/kim/wheelchair_ws/build/wheelchair_robot_navigation2 -- -j12 -l12
+[1.791s] Invoking command in '/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kim/wheelchair_ws/install/wheelchair_robot_ai:/home/kim/wheelchair_ws/install/wheelchair_robot_teleop:/home/kim/wheelchair_ws/install/wheelchair_robot_control:/home/kim/wheelchair_ws/install/wheelchair_core:/opt/ros/humble /usr/bin/cmake --install /home/kim/wheelchair_ws/build/wheelchair_robot_navigation2
+[1.803s] -- Install configuration: ""
+[1.805s] -- Execute custom install script
+[1.806s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/launch/keepout_filter.launch.py
+[1.806s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/launch/navigation2.launch.py
+[1.807s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/map/generate_speed_mask.py
+[1.808s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/map/keepout_mask.pgm
+[1.808s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/map/keepout_mask.yaml
+[1.809s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/map/speed_mask.pgm
+[1.809s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/map/speed_mask.pgm.before_clean
+[1.810s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/map/speed_mask.yaml
+[1.810s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/map/wheelchair_robot_world.pgm
+[1.811s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/map/wheelchair_robot_world.yaml
+[1.812s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/param/wheelchair_robot.yaml
+[1.813s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/rviz/wheelchair_robot_navigation2.rviz
+[1.814s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/ament_index/resource_index/package_run_dependencies/wheelchair_robot_navigation2
+[1.815s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/ament_index/resource_index/parent_prefix_path/wheelchair_robot_navigation2
+[1.815s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/environment/ament_prefix_path.sh
+[1.815s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/environment/ament_prefix_path.dsv
+[1.817s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/environment/path.sh
+[1.817s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/environment/path.dsv
+[1.817s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/local_setup.bash
+[1.818s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/local_setup.sh
+[1.818s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/local_setup.zsh
+[1.818s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/local_setup.dsv
+[1.818s] -- Symlinking: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/package.dsv
+[1.820s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/ament_index/resource_index/packages/wheelchair_robot_navigation2
+[1.820s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/cmake/wheelchair_robot_navigation2Config.cmake
+[1.820s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/cmake/wheelchair_robot_navigation2Config-version.cmake
+[1.820s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_navigation2/share/wheelchair_robot_navigation2/package.xml
+[1.863s] Invoked command in '/home/kim/wheelchair_ws/build/wheelchair_robot_navigation2' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kim/wheelchair_ws/install/wheelchair_robot_ai:/home/kim/wheelchair_ws/install/wheelchair_robot_teleop:/home/kim/wheelchair_ws/install/wheelchair_robot_control:/home/kim/wheelchair_ws/install/wheelchair_core:/opt/ros/humble /usr/bin/cmake --install /home/kim/wheelchair_ws/build/wheelchair_robot_navigation2

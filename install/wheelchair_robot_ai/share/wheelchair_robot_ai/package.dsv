@@ -1,0 +1,6 @@
+source;share/wheelchair_robot_ai/hook/pythonpath.ps1
+source;share/wheelchair_robot_ai/hook/pythonpath.dsv
+source;share/wheelchair_robot_ai/hook/pythonpath.sh
+source;share/wheelchair_robot_ai/hook/ament_prefix_path.ps1
+source;share/wheelchair_robot_ai/hook/ament_prefix_path.dsv
+source;share/wheelchair_robot_ai/hook/ament_prefix_path.sh

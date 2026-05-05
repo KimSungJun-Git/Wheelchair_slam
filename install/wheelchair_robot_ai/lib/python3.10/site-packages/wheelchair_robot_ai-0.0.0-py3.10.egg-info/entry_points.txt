@@ -1,0 +1,4 @@
+[console_scripts]
+agent_analyzer = wheelchair_robot_ai.agent_analyzer:main
+log_collector_node = wheelchair_robot_ai.log_collector_node:main
+

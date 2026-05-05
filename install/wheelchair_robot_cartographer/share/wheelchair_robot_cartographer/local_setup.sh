@@ -1,0 +1,1 @@
+/home/kim/wheelchair_ws/build/wheelchair_robot_cartographer/ament_cmake_environment_hooks/local_setup.sh

@@ -1,0 +1,28 @@
+[1.324s] Invoking command in '/home/kim/wheelchair_ws/build/wheelchair_robot_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kim/wheelchair_ws/install/wheelchair_robot_ai:/home/kim/wheelchair_ws/install/wheelchair_robot_teleop:/home/kim/wheelchair_ws/install/wheelchair_robot_control:/home/kim/wheelchair_ws/install/wheelchair_core:/opt/ros/humble /usr/bin/cmake --build /home/kim/wheelchair_ws/build/wheelchair_robot_description -- -j12 -l12
+[1.789s] Invoked command in '/home/kim/wheelchair_ws/build/wheelchair_robot_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kim/wheelchair_ws/install/wheelchair_robot_ai:/home/kim/wheelchair_ws/install/wheelchair_robot_teleop:/home/kim/wheelchair_ws/install/wheelchair_robot_control:/home/kim/wheelchair_ws/install/wheelchair_core:/opt/ros/humble /usr/bin/cmake --build /home/kim/wheelchair_ws/build/wheelchair_robot_description -- -j12 -l12
+[1.791s] Invoking command in '/home/kim/wheelchair_ws/build/wheelchair_robot_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kim/wheelchair_ws/install/wheelchair_robot_ai:/home/kim/wheelchair_ws/install/wheelchair_robot_teleop:/home/kim/wheelchair_ws/install/wheelchair_robot_control:/home/kim/wheelchair_ws/install/wheelchair_core:/opt/ros/humble /usr/bin/cmake --install /home/kim/wheelchair_ws/build/wheelchair_robot_description
+[1.804s] -- Install configuration: ""
+[1.804s] -- Execute custom install script
+[1.804s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/meshes/bases/wheelchair_robot_n2.stl
+[1.804s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/rviz/wheelchair_robot_model.rviz
+[1.804s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/urdf/wheelchair_robot.urdf
+[1.805s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/launch/display.launch.py
+[1.805s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/urdf/wheelchair_robot.urdf
+[1.805s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/meshes/bases/wheelchair_robot_n2.stl
+[1.805s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/rviz/wheelchair_robot_model.rviz
+[1.805s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/ament_index/resource_index/package_run_dependencies/wheelchair_robot_description
+[1.805s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/ament_index/resource_index/parent_prefix_path/wheelchair_robot_description
+[1.806s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/environment/ament_prefix_path.sh
+[1.806s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/environment/ament_prefix_path.dsv
+[1.809s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/environment/path.sh
+[1.810s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/environment/path.dsv
+[1.811s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/local_setup.bash
+[1.811s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/local_setup.sh
+[1.811s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/local_setup.zsh
+[1.811s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/local_setup.dsv
+[1.815s] -- Symlinking: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/package.dsv
+[1.824s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/ament_index/resource_index/packages/wheelchair_robot_description
+[1.824s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/cmake/wheelchair_robot_descriptionConfig.cmake
+[1.824s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/cmake/wheelchair_robot_descriptionConfig-version.cmake
+[1.824s] -- Up-to-date symlink: /home/kim/wheelchair_ws/install/wheelchair_robot_description/share/wheelchair_robot_description/package.xml
+[1.852s] Invoked command in '/home/kim/wheelchair_ws/build/wheelchair_robot_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/kim/wheelchair_ws/install/wheelchair_robot_ai:/home/kim/wheelchair_ws/install/wheelchair_robot_teleop:/home/kim/wheelchair_ws/install/wheelchair_robot_control:/home/kim/wheelchair_ws/install/wheelchair_core:/opt/ros/humble /usr/bin/cmake --install /home/kim/wheelchair_ws/build/wheelchair_robot_description

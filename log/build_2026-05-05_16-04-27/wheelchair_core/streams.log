@@ -1,0 +1,25 @@
+[2.626s] Invoking command in '/home/kim/wheelchair_ws/build/wheelchair_core': PYTHONPATH=/home/kim/wheelchair_ws/build/wheelchair_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/kim/wheelchair_ws/install/wheelchair_core/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/kim/wheelchair_ws/build/wheelchair_core/build --no-deps symlink_data
+[3.066s] running develop
+[3.417s] running egg_info
+[3.417s] writing wheelchair_core.egg-info/PKG-INFO
+[3.418s] writing dependency_links to wheelchair_core.egg-info/dependency_links.txt
+[3.418s] writing entry points to wheelchair_core.egg-info/entry_points.txt
+[3.418s] writing requirements to wheelchair_core.egg-info/requires.txt
+[3.418s] writing top-level names to wheelchair_core.egg-info/top_level.txt
+[3.421s] reading manifest file 'wheelchair_core.egg-info/SOURCES.txt'
+[3.423s] writing manifest file 'wheelchair_core.egg-info/SOURCES.txt'
+[3.484s] running build_ext
+[3.484s] Creating /home/kim/wheelchair_ws/install/wheelchair_core/lib/python3.10/site-packages/wheelchair-core.egg-link (link to .)
+[3.486s] Installing Nav_go_to_pose script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.486s] Installing mode_manager script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.486s] Installing mode_switch_node script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.486s] Installing precision_docking script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.487s] Installing safety_bumper script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.487s] Installing safety_stop_node script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.488s] Installing scenario_manager script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.488s] Installing telegram_robot script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.489s] Installing teleop_keyboard script to /home/kim/wheelchair_ws/install/wheelchair_core/lib/wheelchair_core
+[3.489s] 
+[3.489s] Installed /home/kim/wheelchair_ws/build/wheelchair_core
+[3.489s] running symlink_data
+[3.538s] Invoked command in '/home/kim/wheelchair_ws/build/wheelchair_core' returned '0': PYTHONPATH=/home/kim/wheelchair_ws/build/wheelchair_core/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/kim/wheelchair_ws/install/wheelchair_core/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/kim/wheelchair_ws/build/wheelchair_core/build --no-deps symlink_data
