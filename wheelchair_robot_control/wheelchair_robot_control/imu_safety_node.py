@@ -13,19 +13,18 @@ class ImuSafetyNode(Node):
         super().__init__('imu_safety_node')
 
         # ===== 임계값 =====
-        self.tilt_threshold_deg = 80.0       # 기울기 한계 (roll/pitch)
-        self.impact_threshold = 80.0          # 충격 가속도 (m/s²) — 약 1.5G
+        self.tilt_threshold_deg = 45.0       # 기울기 한계 (roll/pitch)
+        self.impact_threshold = 45.0          # 충격 가속도 (m/s²) — 약 1.5G
         self.recovery_time_sec = 2.0          # 정상 복귀 후 대기 시간
 
         # ===== 상태 =====
         self.in_emergency = False
         self.last_trigger_time = None
 
-        # ===== 토픽 =====
-        # ⭐ IMU에 sensor_data QoS 적용 (드라이버와 매칭)
+        # IMU에 sensor_data QoS 적용 (드라이버와 매칭)
         self.create_subscription(Imu, '/imu/data', self.imu_cb, qos_profile_sensor_data)
 
-        # ⭐ 전용 토픽으로 분리 — safety_stop_node가 /emergency_stop/imu 구독
+        # 전용 토픽으로 분리 — safety_stop_node가 /emergency_stop/imu 구독
         self.emergency_pub = self.create_publisher(Bool, '/emergency_stop/imu', 10)
         self.sos_pub = self.create_publisher(String, '/sos_trigger', 10)
 
@@ -35,7 +34,6 @@ class ImuSafetyNode(Node):
             f'토픽: /emergency_stop/imu')
 
     def imu_cb(self, msg: Imu):
-        # 1. 기울기 (Roll/Pitch) 계산
         q = msg.orientation
         sinr = 2.0 * (q.w * q.x + q.y * q.z)
         cosr = 1.0 - 2.0 * (q.x * q.x + q.y * q.y)
@@ -44,13 +42,23 @@ class ImuSafetyNode(Node):
         sinp = 2.0 * (q.w * q.y - q.z * q.x)
         pitch = math.degrees(math.asin(max(-1.0, min(1.0, sinp))))
 
+        roll = roll - 1.17
+        pitch = pitch - 5.50
+
+        spin_rate = abs(msg.angular_velocity.z)
+        is_spinning = spin_rate > 0.3 
+
         # 2. 충격 (선형 가속도 크기)
         a = msg.linear_acceleration
         accel_mag = math.sqrt(a.x**2 + a.y**2 + a.z**2)
 
         # 3. 위험 판정
-        tilt_danger = abs(roll) > self.tilt_threshold_deg or abs(pitch) > self.tilt_threshold_deg
-        self.get_logger().info(f'실시간 각도 -> Roll: {roll:.2f}°, Pitch: {pitch:.2f}°')
+        if is_spinning:
+            tilt_danger = False
+        else:
+            tilt_danger = abs(roll) > self.tilt_threshold_deg or abs(pitch) > self.tilt_threshold_deg
+        self.get_logger().info(f'실시간 각도 -> Roll: {roll:.2f}°, Pitch: {pitch:.2f}° | 회전중: {is_spinning}')
+        
         impact_danger = accel_mag > self.impact_threshold
 
         if tilt_danger or impact_danger:

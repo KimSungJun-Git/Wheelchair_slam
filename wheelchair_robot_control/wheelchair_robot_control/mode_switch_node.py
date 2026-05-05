@@ -32,7 +32,7 @@ class ModeSwitchNode(Node):
         self._goal_handle = None
         self._goal_locked = False
 
-        # ===== 대기소(홈) 좌표 — SLAM 맵에서 확인 후 수정 =====
+        # 대기소(홈) 좌표 — SLAM 맵에서 확인 후 수정 
         self.destinations = {
             'home':       {'x': 1.815,  'y': 1.179,  'yaw': 0.0},   # 시작지점 (대기소)
             'room_101':   {'x': 2.146,  'y': 0.003,  'yaw': 0.0},   # 101호
@@ -83,6 +83,11 @@ class ModeSwitchNode(Node):
         self.key_thread = threading.Thread(target=self.key_listener, daemon=True)
         self.key_thread.start()
         
+        # ===== SOS 처리 =====
+        self.sos_sub = self.create_subscription(
+            String, '/sos_trigger', self.sos_callback, 10)
+        self.sos_count = 0
+        
         self._current_destination = None # 현재 이동 중인 목적지 이름 저장용 변수
 
         self.get_logger().info(
@@ -94,7 +99,7 @@ class ModeSwitchNode(Node):
 
     # ===== 목적지 수신 =====
     def destination_callback(self, msg):
-        """웹 UI나 외부에서 목적지 이름 받아서 이동"""
+        """웹 UI외부에서 목적지 이름 받아서 이동"""
         name = msg.data.strip().lower()
 
         if name not in self.destinations:
@@ -136,8 +141,7 @@ class ModeSwitchNode(Node):
         goal.pose.pose.orientation.z = q[2]
         goal.pose.pose.orientation.w = q[3]
 
-        self.get_logger().info(
-            f'{name}(으)로 이동: x={dest["x"]:.2f}, y={dest["y"]:.2f}')
+        self.get_logger().info(f'{name}(으)로 이동: x={dest["x"]:.2f}, y={dest["y"]:.2f}')
 
         # 현재 진행 중인 목적지 이름 저장 (도착 콜백에서 사용)
         self._current_destination = name
@@ -146,7 +150,7 @@ class ModeSwitchNode(Node):
             goal, feedback_callback=self._dest_feedback_cb)
         send_future.add_done_callback(self._dest_response_cb)
 
-    # ===== 콜백들 (이름 변경: home → dest) =====
+    # 콜백들 (이름 변경: home → dest) 
     def _dest_response_cb(self, future):
         goal_handle = future.result()
         if not goal_handle.accepted:
@@ -294,6 +298,47 @@ class ModeSwitchNode(Node):
                 
                 # 2. 현재 Nav2가 수행 중인 이동 작업을 취소합니다.
                 self.cancel_nav()
+    def sos_callback(self, msg):
+        """SOS 신호 수신 → 즉시 정지 + 수동 모드 전환 + 이벤트 기록"""
+        self.sos_count += 1
+        source = msg.data if msg.data else 'unknown'
+    
+        self.get_logger().error(
+            f'🚨🚨🚨 SOS #{self.sos_count} 발신: source="{source}" 🚨🚨🚨\n'
+            f'    → Nav2 취소 + 수동 모드 전환 + 즉시 정지'
+        )
+    
+        # 1) Nav2 작업 즉시 취소
+        self.cancel_nav()
+    
+        # 2) 모드를 수동으로 강제 전환 (사용자가 직접 통제)
+        self.mode = 'manual'
+    
+        # 3) cmd_vel을 0으로 발행 (즉시 정지)
+        stop = Twist()
+        self.cmd_pub.publish(stop)
+        self.latest_nav_cmd = Twist()
+        self.latest_teleop_cmd = Twist()
+    
+        # 4) SOS 이벤트를 파일에 기록 (사후 분석용)
+        try:
+            import os
+            log_path = os.path.expanduser('~/wheelchair_sos.log')
+            now = self.get_clock().now().to_msg()
+            last_x = (f'{self.last_goal.pose.position.x:.3f}'
+                      if self.last_goal else 'N/A')
+            last_y = (f'{self.last_goal.pose.position.y:.3f}'
+                      if self.last_goal else 'N/A')
+            with open(log_path, 'a') as f:
+                f.write(
+                    f'{now.sec}.{now.nanosec:09d},'
+                    f'source={source},'
+                    f'last_goal_x={last_x},'
+                    f'last_goal_y={last_y},'
+                    f'count={self.sos_count}\n')
+            self.get_logger().info(f'SOS 이벤트 기록: {log_path}')
+        except Exception as e:
+            self.get_logger().warn(f'SOS 로그 기록 실패: {e}')
 
     def mode_cmd_callback(self, msg):
         cmd = msg.data.strip().lower()

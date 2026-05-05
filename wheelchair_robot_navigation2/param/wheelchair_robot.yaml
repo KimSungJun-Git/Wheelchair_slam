@@ -1,11 +1,11 @@
 amcl:
   ros__parameters:
     use_sim_time: False
-    alpha1: 0.8
+    alpha1: 1.5
     alpha2: 0.2
-    alpha3: 0.2
-    alpha4: 0.8
-    alpha5: 0.2
+    alpha3: 0.6
+    alpha4: 1.5
+    alpha5: 0.4
     base_frame_id: "base_footprint"
     beam_skip_distance: 0.5
     beam_skip_error_threshold: 0.9
@@ -31,8 +31,8 @@ amcl:
     sigma_hit: 0.2
     tf_broadcast: true
     transform_tolerance: 1.0
-    update_min_a: 0.05
-    update_min_d: 0.1
+    update_min_a: 0.02
+    update_min_d: 0.05
     z_hit: 0.5
     z_max: 0.05
     z_rand: 0.5
@@ -126,7 +126,7 @@ controller_server:
       min_lookahead_dist: 0.2
       max_lookahead_dist: 0.6
       lookahead_time: 1.0
-      rotate_to_heading_angular_vel: 0.15
+      rotate_to_heading_angular_vel: 0.10
       transform_tolerance: 0.1
       use_velocity_scaled_lookahead_dist: true
       min_approach_linear_velocity: 0.05
@@ -138,7 +138,7 @@ controller_server:
       regulated_linear_scaling_min_radius: 0.1
       regulated_linear_scaling_min_speed: 0.05
       allow_reversing: false
-      max_angular_accel: 0.2
+      max_angular_accel: 0.1
       max_robot_pose_search_dist: 10.0
       
       max_linear_accel: 0.2        
@@ -169,8 +169,8 @@ local_costmap:
       stvl_layer:
         plugin: "spatio_temporal_voxel_layer/SpatioTemporalVoxelLayer"
         enabled: true
-        voxel_decay: 2.0     # (핵심) 2.0초 동안 잔상을 남긴 후 서서히 지움
-        decay_model: 0       # 0 = 선형(점점 희미해짐), 1 = 지수형
+        voxel_decay: 0.5    # (핵심) 2.0초 동안 잔상을 남긴 후 서서히 지움
+        decay_model: 0     # 0 = 선형(점점 희미해짐), 1 = 지수형
         voxel_size: 0.05
         track_unknown_space: true
         observation_sources: scan
@@ -185,7 +185,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 0.20
-        cost_scaling_factor: 3.0
+        cost_scaling_factor: 4.0
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -228,6 +228,7 @@ global_costmap:
       speed_filter:
         plugin: "nav2_costmap_2d::SpeedFilter" 
         filter_info_topic: "/speed_filter_info" 
+        speed_limit_topic: "/speed_limit"
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -249,7 +250,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 0.20
-        cost_scaling_factor: 3.0
+        cost_scaling_factor: 2.0
       always_send_full_costmap: True
   global_costmap_client:
     ros__parameters:

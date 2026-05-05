@@ -126,18 +126,14 @@ class SafetyStopNode(Node):
 
         # 3) 로그
         if active:
-            self.get_logger().error(
-                f'🛑 [{key}] 위험 상태 → 위험 센서: {self.dangerous_sensors}')
+            self.get_logger().error(f'🛑 [{key}] 위험 상태 → 위험 센서: {self.dangerous_sensors}')
         else:
             if self.dangerous_sensors:
-                self.get_logger().warn(
-                    f'✅ [{key}] 정상 복귀 → 남은 위험 센서: {self.dangerous_sensors}')
+                self.get_logger().warn(f'✅ [{key}] 정상 복귀 → 남은 위험 센서: {self.dangerous_sensors}')
             else:
                 self.get_logger().info(f'✅ [{key}] 정상 복귀 → 모든 센서 정상')
 
-    # ============================================================
     #  센서 콜백 (마지막 수신 시각 기록)
-    # ============================================================
     def lidar_callback(self, msg: LaserScan):
         self.last_seen['lidar'] = self.get_clock().now()
 
@@ -159,9 +155,7 @@ class SafetyStopNode(Node):
         self.dist_right = msg.range
         self.last_seen['ultrasonic_right'] = self.get_clock().now()
 
-    # ============================================================
     #  센서 헬스 체크 (0.5초마다)
-    # ============================================================
     def check_sensor_health(self):
         now = self.get_clock().now()
 
@@ -199,9 +193,7 @@ class SafetyStopNode(Node):
         msg.data = json.dumps(health_status, ensure_ascii=False)
         self.health_pub.publish(msg)
 
-    # ============================================================
     #  Cmd Vel 게이트웨이
-    # ============================================================
     def nav_cmd_callback(self, msg: Twist):
         self.process_and_publish(msg, "Navigation")
 
@@ -238,9 +230,7 @@ class SafetyStopNode(Node):
         }, ensure_ascii=False)
         self.action_pub.publish(msg)
 
-    # ============================================================
     #  회피 방향 결정
-    # ============================================================
     def check_danger_state(self):
         in_danger_now = self.dist_front <= self.danger_distance_m
 

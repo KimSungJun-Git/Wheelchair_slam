@@ -81,7 +81,14 @@ def generate_launch_description():
             executable='costmap_filter_info_server',
             name='speed_filter_info_server',
             output='screen',
-            parameters=[param_path],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                'type': 1,                                    # ⭐ 1 = SpeedLimit
+                'filter_info_topic': '/speed_filter_info',    # ⭐ 다른 토픽
+                'mask_topic': '/speed_filter_mask',
+                'base': 0.0,
+                'multiplier': 1.0,                            # 마스크 픽셀값 그대로 % 사용
+            }],
         ),
         Node(
             package='nav2_map_server',

@@ -29,6 +29,8 @@ setup(
             'main_controller = wheelchair_robot_control.main_controller:main',
             'safety_stop_node = wheelchair_robot_control.safety_stop_node:main',
             'mode_switch_node = wheelchair_robot_control.mode_switch_node:main',
+            'imu_safety_node = wheelchair_robot_control.imu_safety_node:main',
+            'localization_monitor_node = wheelchair_robot_control.localization_monitor_node:main',
         ],
     },
 )
