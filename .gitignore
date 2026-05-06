@@ -7,6 +7,6 @@ log/
 driving_data/
 
 .gitignore
-
+.vscode/
 # 특정 소스 패키지 제외
 src/wheelchair_core/
