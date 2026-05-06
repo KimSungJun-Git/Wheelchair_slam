@@ -15,6 +15,27 @@ import json
 class SafetyStopNode(Node):
     def __init__(self):
         super().__init__('safety_stop_node')
+        self.create_subscription(Twist, '/cmd_vel_nav', self.nav_cmd_callback, 10)
+        # 초음파 (RELIABLE QoS, 일반 publisher와 매칭)
+        self.create_subscription(Range, '/ultrasonic/range', self.front_callback, 10)
+        self.create_subscription(Range, '/ultrasonic/left', self.left_callback, 10)
+        self.create_subscription(Range, '/ultrasonic/right', self.right_callback, 10)
+        # 라이다·IMU는 sensor_data QoS 사용 (BEST_EFFORT, 드라이버와 매칭됨)
+        self.create_subscription(LaserScan, '/scan', self.lidar_callback, qos_profile_sensor_data)
+        self.create_subscription(Imu, '/imu/data', self.imu_callback, qos_profile_sensor_data)
+        # 오도메트리 (RELIABLE)
+        self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
+
+        # 외부 비상 신호 — IMU와 Localization으로 분리
+        self.create_subscription(Bool, '/emergency_stop/imu', self.imu_emergency_cb, 10)
+        self.create_subscription(Bool, '/emergency_stop/localization', self.localization_emergency_cb, 10)
+
+        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel_safe', 10)
+        self.zone_pub = self.create_publisher(String, '/current_zone', 10)
+        self.avoid_pub = self.create_publisher(String, '/avoidance_direction', 10)
+        self.alert_pub = self.create_publisher(String, '/safety_alert', 10)
+        self.action_pub = self.create_publisher(String, '/safety_action', 10)
+        self.health_pub = self.create_publisher(String, '/sensor_health', 10)
 
         # ===== 설정값 =====
         self.danger_distance_m = 0.20      # 전방 정지 거리
@@ -40,7 +61,7 @@ class SafetyStopNode(Node):
         self.dangerous_sensors = []
         self.is_emergency = False
 
-        # ===== 헬스 체크용 타임스탬프 =====
+        # 헬스 체크용 타임스탬프 o
         # None은 "한 번도 메시지가 안 옴"을 의미
         self.last_seen: Dict[str, Optional[Time]] = {
             'lidar': None,
@@ -63,37 +84,7 @@ class SafetyStopNode(Node):
         self.start_time = self.get_clock().now()
         self.startup_grace_sec = 5.0
 
-        # ===== 구독 =====
-        # 명령 토픽
-        self.create_subscription(Twist, '/cmd_vel_nav', self.nav_cmd_callback, 10)
-
-        # 초음파 (RELIABLE QoS, 일반 publisher와 매칭)
-        self.create_subscription(Range, '/ultrasonic/range', self.front_callback, 10)
-        self.create_subscription(Range, '/ultrasonic/left', self.left_callback, 10)
-        self.create_subscription(Range, '/ultrasonic/right', self.right_callback, 10)
-
-        # ⭐ 라이다·IMU는 sensor_data QoS 사용 (BEST_EFFORT, 드라이버와 매칭됨)
-        self.create_subscription(LaserScan, '/scan', self.lidar_callback, qos_profile_sensor_data)
-        self.create_subscription(Imu, '/imu/data', self.imu_callback, qos_profile_sensor_data)
-
-        # 오도메트리 (RELIABLE)
-        self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
-
-        # ⭐ 외부 비상 신호 — IMU와 Localization으로 분리
-        self.create_subscription(
-            Bool, '/emergency_stop/imu', self.imu_emergency_cb, 10)
-        self.create_subscription(
-            Bool, '/emergency_stop/localization', self.localization_emergency_cb, 10)
-
-        # ===== 발행 =====
-        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel_safe', 10)
-        self.zone_pub = self.create_publisher(String, '/current_zone', 10)
-        self.avoid_pub = self.create_publisher(String, '/avoidance_direction', 10)
-        self.alert_pub = self.create_publisher(String, '/safety_alert', 10)
-        self.action_pub = self.create_publisher(String, '/safety_action', 10)
-        self.health_pub = self.create_publisher(String, '/sensor_health', 10)
-
-        # ===== 타이머 =====
+        # 타이머 
         self.create_timer(1.0, self.publish_zone)
         self.create_timer(0.1, self.check_danger_state)
         self.create_timer(0.5, self.check_sensor_health)
@@ -102,10 +93,7 @@ class SafetyStopNode(Node):
             f'Safety Stop Node 시작 | 전방 정지: {self.danger_distance_m*100:.0f}cm | '
             f'헬스체크 활성화 (라이다/IMU/초음파/모터)')
 
-    # ============================================================
     #  센서 위험 상태 갱신
-    # ============================================================
-    
     def imu_emergency_cb(self, msg: Bool):
         self.set_reason('imu_emergency', msg.data)
 
@@ -155,7 +143,7 @@ class SafetyStopNode(Node):
         self.dist_right = msg.range
         self.last_seen['ultrasonic_right'] = self.get_clock().now()
 
-    #  센서 헬스 체크 (0.5초마다)
+    #  센서 상태 체크 (0.5초마다)
     def check_sensor_health(self):
         now = self.get_clock().now()
 
