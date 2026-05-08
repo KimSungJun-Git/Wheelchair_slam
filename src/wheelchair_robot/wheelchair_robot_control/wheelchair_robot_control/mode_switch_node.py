@@ -25,6 +25,34 @@ def quaternion_from_yaw(yaw):
 class ModeSwitchNode(Node):
     def __init__(self):
         super().__init__('mode_switch_node')
+        
+        # 목적지 이름으로 이동 명령
+        self.dest_sub = self.create_subscription(String, '/destination', self.destination_callback, 10)
+        # 홈 귀환 명령 (웹 UI → Empty 메시지)
+        self.home_sub = self.create_subscription(Empty, '/go_home', self.go_home_callback, 10)
+        # 3. RViz 등에서 클릭한 목적지 좌표 수신
+        goal_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.goal_sub = self.create_subscription(PoseStamped, '/goal_pose', self.goal_cb, goal_qos)
+        # 4. Nav2가 생성한 전체 이동 경로 수신
+        self.plan_sub = self.create_subscription(Path, '/plan', self.plan_cb, 10)
+        
+        # 1. 외부에서 모드 전환 명령 수신 (수동 <-> 자율)
+        self.mode_cmd_sub = self.create_subscription(String, '/mode_switch', self.mode_cmd_callback, 10)
+        # 안전 알림 (safety_stop_node → 금지구역 진입 시 goal 취소)
+        self.safety_sub = self.create_subscription(String, '/safety_alert', self.safety_alert_callback, 10)
+        self.mode_pub = self.create_publisher(String, '/robot_mode', 10)####
+
+        # ===== 토픽 구독 =====
+        self.nav_cmd_sub = self.create_subscription(Twist, '/cmd_vel_safe', self.nav_cmd_callback, 10)
+        self.teleop_cmd_sub = self.create_subscription(Twist, '/cmd_vel_teleop', self.teleop_cmd_callback, 10)
+        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+
+        # ===== Nav2 Action Client =====
+        # 1. 목적지로 이동을 지시하는 Action Client
+        self._nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        # ===== Nav2 Cancel Service =====
+        # 2. 진행 중인 이동을 강제 취소하는 Service Client
+        self._cancel_client = self.create_client(CancelGoal, '/navigate_to_pose/_action/cancel_goal')
 
         # ===== 모드 상태 =====
         self.mode = 'manual'
@@ -40,36 +68,7 @@ class ModeSwitchNode(Node):
             'emergency':  {'x': -0.751, 'y': 0.272,  'yaw': 0.0},   # 응급실
         }
         self.home_pose = self.destinations['home']
-        # 목적지 이름으로 이동 명령
-        self.dest_sub = self.create_subscription(String, '/destination', self.destination_callback, 10)
-
-        # ===== Nav2 Action Client =====
-        self._nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
-
-        # ===== Nav2 Cancel Service =====
-        self._cancel_client = self.create_client(CancelGoal, '/navigate_to_pose/_action/cancel_goal')
-
-        # ===== 토픽 구독 =====
-        self.nav_cmd_sub = self.create_subscription(Twist, '/cmd_vel_safe', self.nav_cmd_callback, 10)
-        self.teleop_cmd_sub = self.create_subscription(Twist, '/cmd_vel_teleop', self.teleop_cmd_callback, 10)
-
-        goal_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE, durability=DurabilityPolicy.TRANSIENT_LOCAL)
-        self.goal_sub = self.create_subscription(PoseStamped, '/goal_pose', self.goal_cb, goal_qos)
-
-        self.plan_sub = self.create_subscription(Path, '/plan', self.plan_cb, 10)
-
-        self.mode_cmd_sub = self.create_subscription(String, '/mode_switch', self.mode_cmd_callback, 10)
-
-        # 홈 귀환 명령 (웹 UI → Empty 메시지)
-        self.home_sub = self.create_subscription(Empty, '/go_home', self.go_home_callback, 10)
-
-        # 안전 알림 (safety_stop_node → 금지구역 진입 시 goal 취소)
-        self.safety_sub = self.create_subscription(String, '/safety_alert', self.safety_alert_callback, 10)
-
-        # ===== 토픽 발행 =====
-        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
-        self.mode_pub = self.create_publisher(String, '/robot_mode', 10)
-
+        
         # ===== 최신 명령 저장 =====
         self.latest_nav_cmd = Twist()
         self.latest_teleop_cmd = Twist()

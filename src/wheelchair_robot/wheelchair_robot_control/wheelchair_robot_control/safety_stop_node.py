@@ -20,12 +20,10 @@ class SafetyStopNode(Node):
         self.create_subscription(Range, '/ultrasonic/range', self.front_callback, 10)
         self.create_subscription(Range, '/ultrasonic/left', self.left_callback, 10)
         self.create_subscription(Range, '/ultrasonic/right', self.right_callback, 10)
-        # 라이다·IMU는 sensor_data QoS 사용 (BEST_EFFORT, 드라이버와 매칭됨)
+        # 라이다, IMU, odom은 sensor_data  끊김 감지 위해 타임스탬프 기록
         self.create_subscription(LaserScan, '/scan', self.lidar_callback, qos_profile_sensor_data)
         self.create_subscription(Imu, '/imu/data', self.imu_callback, qos_profile_sensor_data)
-        # 오도메트리 (RELIABLE)
         self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
-
         # 외부 비상 신호 — IMU와 Localization으로 분리
         self.create_subscription(Bool, '/emergency_stop/imu', self.imu_emergency_cb, 10)
         self.create_subscription(Bool, '/emergency_stop/localization', self.localization_emergency_cb, 10)

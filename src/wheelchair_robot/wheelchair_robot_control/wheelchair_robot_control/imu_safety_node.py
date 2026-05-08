@@ -11,7 +11,13 @@ import math
 class ImuSafetyNode(Node):
     def __init__(self):
         super().__init__('imu_safety_node')
+        
+        # IMU에 sensor_data QoS 적용 (드라이버와 매칭)
+        self.create_subscription(Imu, '/imu/data', self.imu_cb, qos_profile_sensor_data)
 
+        # 전용 토픽으로 분리 — safety_stop_node가 /emergency_stop/imu 구독
+        self.emergency_pub = self.create_publisher(Bool, '/emergency_stop/imu', 10) #비상정지 신호
+        self.sos_pub = self.create_publisher(String, '/sos_trigger', 10) #비상 상황 상세 정보 (reason:detail) mode_switch, log_control 등과 통합 가능하도록 String 메시지로 발행
         # ===== 임계값 =====
         self.tilt_threshold_deg = 45.0       # 기울기 한계 (roll/pitch)
         self.impact_threshold = 45.0          # 충격 가속도 (m/s²) — 약 1.5G
@@ -20,13 +26,6 @@ class ImuSafetyNode(Node):
         # ===== 상태 =====
         self.in_emergency = False
         self.last_trigger_time = None
-
-        # IMU에 sensor_data QoS 적용 (드라이버와 매칭)
-        self.create_subscription(Imu, '/imu/data', self.imu_cb, qos_profile_sensor_data)
-
-        # 전용 토픽으로 분리 — safety_stop_node가 /emergency_stop/imu 구독
-        self.emergency_pub = self.create_publisher(Bool, '/emergency_stop/imu', 10)
-        self.sos_pub = self.create_publisher(String, '/sos_trigger', 10)
 
         self.create_timer(0.1, self.publish_state)
         self.get_logger().info(
