@@ -2,7 +2,6 @@ const { useState: useS, useEffect: useE, useRef: useR, useMemo: useM } = React;
 
 function LiveMap({ pose, history }) {
   const W = 900, H = 540;
-  // Compute bounds from history + pose
   const all = [...history, pose].filter((p) => p && p.x != null);
   if (!all.length) {
     return <div className="live-map empty"><div className="empty-msg">위치 데이터 대기 중…</div></div>;
@@ -75,6 +74,23 @@ function LivePage() {
   const [confirmStop, setConfirmStop] = useS(false);
   const [stopped, setStopped] = useS(false);
   const seenRef = useR(new Set());
+  
+  // 분석 상태 관리
+  const [analyzing, setAnalyzing] = useS(false);
+
+  // 일과 마감 함수
+  const handleEndSession = async () => {
+    if (confirm("현재 주행 세션을 마감하고 지금까지의 로그로 AI 진단을 시작하시겠습니까?")) {
+      setAnalyzing(true);
+      try {
+        await window.Api.endSession();
+        alert("AI 분석이 시작되었습니다! 약 1~2분 뒤 '보고서' 탭에서 결과를 확인하세요.");
+      } catch (e) {
+        alert("분석 요청 중 문제가 발생했습니다. 서버가 켜져 있는지 확인해주세요.");
+      }
+      setAnalyzing(false);
+    }
+  };
 
   useE(() => {
     let alive = true;
@@ -97,7 +113,6 @@ function LivePage() {
 
   const events = snap?.events || [];
 
-  // Animate new events sliding in
   const tagged = useM(() => {
     return events.map((e, i) => {
       const k = `${e.ts}|${e.action}|${e.reason_key}`;
@@ -147,6 +162,7 @@ function LivePage() {
         </div>
 
         <div className="live-right">
+          {/* 이벤트 스트림 */}
           <div className="card stream-card">
             <div className="card-head">
               <div>
@@ -177,6 +193,22 @@ function LivePage() {
             </div>
           </div>
 
+          {/* 일과 마감 및 AI 분석 버튼 카드 */}
+          <div className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', marginBottom: '12px' }}>
+            <button 
+              className="btn primary" 
+              style={{ width: '100%', padding: '14px', fontSize: '15px', justifyContent: 'center' }} 
+              onClick={handleEndSession}
+              disabled={analyzing}
+            >
+              {analyzing ? "분석 요청 중..." : "일과 마감 및 AI 분석 시작"}
+            </button>
+            <div className="muted-meta" style={{ textAlign: 'center', fontSize: '12px' }}>
+              지금까지의 주행 로그를 바탕으로 리포트를 생성합니다.
+            </div>
+          </div>
+
+          {/* 원격 정지 (stop-card) */}
           <div className={`stop-card ${stopped ? "stopped" : ""}`}>
             {!stopped ? (
               <button className="stop-btn" onClick={() => setConfirmStop(true)}>
@@ -202,6 +234,7 @@ function LivePage() {
         </div>
       </div>
 
+      {/* 원격 정지 모달 */}
       {confirmStop && (
         <div className="modal-back" onClick={() => setConfirmStop(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>

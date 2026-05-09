@@ -241,6 +241,15 @@ const Api = {
     const up = await probeServer();
     return up ? "live" : "sample";
   },
+  async triggerAnalysis() {
+    if (await probeServer()) {
+      const response = await fetch(`${API_BASE}/api/analyze/latest`, { 
+        method: "POST" 
+      });
+      return response.json();
+    }
+    return { ok: false, message: "백엔드 서버가 실행 중이 아닙니다." };
+  },
 
   async getHealth() {
     if (await probeServer()) {

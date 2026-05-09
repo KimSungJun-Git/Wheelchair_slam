@@ -2,7 +2,6 @@ const { useState: useS, useEffect: useE, useRef: useR, useMemo: useM } = React;
 
 function LiveMap({ pose, history }) {
   const W = 900, H = 540;
-  // Compute bounds from history + pose
   const all = [...history, pose].filter((p) => p && p.x != null);
   if (!all.length) {
     return <div className="live-map empty"><div className="empty-msg">위치 데이터 대기 중…</div></div>;
@@ -97,7 +96,6 @@ function LivePage() {
 
   const events = snap?.events || [];
 
-  // Animate new events sliding in
   const tagged = useM(() => {
     return events.map((e, i) => {
       const k = `${e.ts}|${e.action}|${e.reason_key}`;

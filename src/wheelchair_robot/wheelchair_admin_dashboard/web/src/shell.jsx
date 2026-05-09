@@ -99,6 +99,18 @@ function Header({ page, mode, health }) {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+  const handleManualAnalyze = async () => {
+    if (!confirm("현재까지의 로그를 기반으로 AI 분석을 시작하시겠습니까?")) return;
+    
+    // 로딩 상태 표시 등을 추가하면 더 좋습니다.
+    const result = await window.Api.triggerAnalysis();
+    if (result.ok) {
+      alert("분석 완료! 보고서 목록을 확인하세요.");
+      location.reload(); // 결과 반영을 위한 새로고침
+    } else {
+      alert("에러: " + result.detail);
+    }
+  };
   return (
     <header className="topbar">
       <div className="topbar-left">

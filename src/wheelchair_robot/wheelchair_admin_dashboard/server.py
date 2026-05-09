@@ -33,7 +33,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
-
+import subprocess
 
 # ───────────────────────── Config ─────────────────────────
 
@@ -190,7 +190,7 @@ def session_summary(path: Path, with_events: bool = False, with_raw: bool = Fals
             "has_md": md is not None,
         }
 
-    tss = [l.get("timestamp") for l in logs if l.get("timestamp")]
+    tss = [float(ts) for l in logs if (ts := l.get("timestamp"))]
     started = min(tss) if tss else None
     ended = max(tss) if tss else None
 
@@ -363,7 +363,30 @@ def root():
             "/api/live",
         ],
     })
-
+@app.post("/api/analyze_session")
+def analyze_session():
+    """대시보드에서 명시적 세션 종료 및 AI 분석 트리거"""
+    try:
+        # ROS 2 agent_analyzer 노드를 백그라운드로 실행
+        cmd = "source /opt/ros/humble/setup.bash && source ~/wheelchair_ws/install/setup.bash && ros2 run wheelchair_robot_ai agent_analyzer"
+        subprocess.Popen(["bash", "-c", cmd])
+        return {"ok": True, "message": "세션 종료 및 AI 분석이 백그라운드에서 시작되었습니다."}
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(500, f"분석 실행 실패: {str(e)}")
+@app.post("/api/analyze/latest")
+def trigger_analysis():
+    """최신 주행 로그에 대해 AI 분석 스크립트를 실행합니다."""
+    try:
+        # run_analyzer.sh 실행 (워크스페이스 내 경로 확인 필요)
+        script_path = os.path.expanduser("~/wheelchair_ws/run_analyzer.sh")
+        # subprocess를 사용하여 쉘 스크립트 실행
+        result = subprocess.run(["bash", script_path], capture_output=True, text=True, check=True)
+        return {"ok": True, "message": "AI 분석이 성공적으로 완료되었습니다.", "output": result.stdout}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(500, detail=f"분석 스크립트 실행 실패: {e.stderr}")
+    except Exception as e:
+        raise HTTPException(500, detail=str(e))
 
 # ───────────────────────── Entrypoint ─────────────────────────
 
