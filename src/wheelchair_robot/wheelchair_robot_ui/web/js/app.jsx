@@ -402,7 +402,6 @@ function AppInner() {
       },
     });
   };
-
   const askGoHomeBase = () => {
     setConfirm({
       title: '대기소로 자동 귀환할까요?',
@@ -412,7 +411,35 @@ function AppInner() {
       tone: 'primary',
       onConfirm: () => {
         setConfirm(null);
-        doGoHomeBase();
+        doStartNavigation('home');
+      },
+    });
+  };
+
+// 일과(이용) 종료 + AI 분석 트리거
+  const askEndSession = () => {
+    setConfirm({
+      title: '오늘 이용을 종료할까요?',
+      message: '주행 기록을 AI가 분석합니다 (1~2분 소요).',
+      confirmText: '네, 종료합니다',
+      cancelText: '아니오',
+      tone: 'primary',
+      onConfirm: async () => {
+        setConfirm(null);
+        actRef.current.logEvent('🛑 이용 종료 요청');
+        try {
+          const res = await fetch('http://localhost:8090/api/analyze_session', {
+            method: 'POST',
+          });
+          const data = await res.json();
+          if (data.ok) {
+            actRef.current.logEvent('🤖 AI 분석 시작됨');
+          } else {
+            actRef.current.logEvent('⚠️ 분석 요청 실패');
+          }
+        } catch (e) {
+          actRef.current.logEvent('⚠️ 서버 연결 실패 — 관제 서버 확인');
+        }
       },
     });
   };
@@ -575,7 +602,7 @@ function AppInner() {
 
   let screen;
   switch (currentScreen) {
-    case 'home':     screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} />; break;
+    case 'home':     screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} onEndSession={askEndSession} />; break;
     case 'search':   screen = <SearchScreen t={t} onBack={popScreen} onGoHome={goHomeAll} onStartRoute={askStartNavigation} />; break;
     case 'nav':      screen = <NavScreen t={t} mode={mode} distances={distances} robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onStop={stopNavigation} onManual={navToManual} onAuto={navToAuto} />; break;
     case 'alert':    screen = <AlertScreen t={t} alertReason={alertReason} robotWorld={robotWorld} mapConfig={mapConfig} onResume={resumeNav} onManual={navToManual} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onGoHomeBase={askGoHomeBase} />; break;

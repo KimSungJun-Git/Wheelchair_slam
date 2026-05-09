@@ -363,8 +363,14 @@ def root():
             "/api/live",
         ],
     })
+_analyzing = False
+
 @app.post("/api/analyze_session")
 def analyze_session():
+    global _analyzing
+    if _analyzing:
+        return {"ok": False, "message": "이미 분석 중입니다."}
+    _analyzing = True
     """대시보드에서 명시적 세션 종료 및 AI 분석 트리거"""
     try:
         # ROS 2 agent_analyzer 노드를 백그라운드로 실행
