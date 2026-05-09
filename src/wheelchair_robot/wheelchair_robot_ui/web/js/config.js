@@ -1,29 +1,22 @@
 // ─── 0. ROS / 센서 / 맵 설정 ──────────────────────────────────────
-// 운영 환경에 맞게 조정하는 상수들. 코드 수정 없이 이 블록만 만지면 됨.
 const ROS_CONFIG = {
   url: 'ws://localhost:9090',  // rosbridge_websocket 주소
 };
 
-// 거리 임계값 (meters) — 색상 분기 기준
 const DIST_THRESHOLDS = {
-  red: 0.5,     // <50cm: 빨강 (위험)
-  orange: 0.8,  // 50~80cm: 주황 (주의)
-  white: 1.0,   // 80~100cm: 불투명 흰색 (관심)
-  // ≥1m: 표시 안 함 (안전)
+  red: 0.5,     
+  orange: 0.8,  
+  white: 1.0,   
 };
 
-// 맵 좌표 변환 — /map 토픽이 들어오면 자동으로 갱신되는 React state로 관리.
-//   토픽이 안 들어오면 아래 기본값 사용.
 const DEFAULT_MAP_CONFIG = {
-  origin_x: -10.0,        // map.yaml의 origin[0]
-  origin_y: -10.0,        // map.yaml의 origin[1]
-  pixels_per_meter: 30,   // SVG 1m당 픽셀
+  origin_x: -10.0,        
+  origin_y: -10.0,        
+  pixels_per_meter: 30,   
   svg_width: 800,
   svg_height: 480,
 };
 
-// 라이다 각도 → 5방향 분류 (라이다 0rad이 정면, 반시계가 +)
-//   휠체어 정면 ±20°가 'front', 좌측 등.
 const LIDAR_SECTORS = [
   { key: 'front',      from: -20, to:  20 },
   { key: 'frontLeft',  from:  20, to:  60 },
@@ -32,7 +25,7 @@ const LIDAR_SECTORS = [
   { key: 'right',      from: -100, to: -60 },
 ];
 
-// ─── 1. 블루 테마 토큰 적용 (60:30:10 비율) ────────────────────────
+// ─── 1. 블루 테마 토큰 적용 ────────────────────────
 const TOKENS = {
   color: {
     bg: '#F8FAFC', surface: '#FFFFFF', surfaceAlt: '#BFDBFE', surfaceDark: '#191970',
@@ -49,7 +42,6 @@ const TOKENS = {
 
 const I18N = { ko: { hello: '안녕하세요', wheresToday: '오늘은 어디로 갈까요?', caregiver: '보호자 연결됨', search: '목적지 검색', goHome: '대기소로 자동 귀환', favorites: '즐겨찾기', myRoom: '내 병실', rehab: '재활치료실', map: '실시간 맵', sos: 'SOS', startRoute: '경로 시작', manual: '수동', auto: '자율', stop: '정지', obstacle: '장애물 감지' } };
 
-// 목적지 라벨 매핑 (활동 로그 표시용) - mode_switch_node.py의 destinations 키와 매칭
 const DEST_LABELS = {
   emergency: '응급실(Emergency)',
   room_101: '101호',
@@ -57,7 +49,6 @@ const DEST_LABELS = {
   home: '대기소',
 };
 
-// 센서 헬스 표시용 라벨
 const SENSOR_LABELS = {
   lidar: '라이다',
   imu: 'IMU',
