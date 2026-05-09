@@ -50,6 +50,44 @@ function ReportsPage() {
   const [filter, setFilter] = useStateR({ severity: "all", minConf: 0, q: "" });
   const [shareOpen, setShareOpen] = useStateR(false);
 
+  const [deepStatus, setDeepStatus] = useStateR(null);
+
+  const runDeepAnalyze = async () => {
+    setDeepStatus({ status: 'starting' });
+    try {
+      const res = await fetch('http://localhost:8090/api/deep_analyze', { method: 'POST' });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setDeepStatus({ status: 'error', error: errData.detail || '서버 에러 발생' });
+        return;
+      }
+      
+      const data = await res.json();
+      const { job_id, target } = data;
+      setDeepStatus({ status: 'running', target });
+      
+      const poll = setInterval(async () => {
+        const statusRes = await fetch(`http://localhost:8090/api/deep_analyze/${job_id}`);
+        const statusData = await statusRes.json();
+        
+        if (statusData.status === 'done') {
+          clearInterval(poll);
+          setDeepStatus({ status: 'done', ok: statusData.ok, target: statusData.target });
+          
+          // 분석 완료 후 최신 보고서 목록을 다시 불러옵니다
+          window.Api.getReports().then((d) => setList(d.reports || []));
+          
+        } else if (statusData.status === 'error' || statusData.status === 'timeout') {
+          clearInterval(poll);
+          setDeepStatus({ status: 'error', error: statusData.error });
+        }
+      }, 5000);
+      
+    } catch (error) {
+      setDeepStatus({ status: 'error', error: error.message });
+    }
+  };
+
   useEffectR(() => {
     window.Api.getReports().then((d) => {
       setList(d.reports || []);
@@ -81,6 +119,25 @@ function ReportsPage() {
     <div className="page reports">
       <div className="rep-grid">
         <div className="rep-left">
+          <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f8fafc' }}>
+            <button 
+              className="btn primary" 
+              onClick={runDeepAnalyze}
+              disabled={deepStatus?.status === 'running' || deepStatus?.status === 'starting'}
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              🤖 최신 로그 R1 깊은 진단
+            </button>
+            
+            {deepStatus && (
+              <div style={{ marginTop: '10px', fontSize: '13px', fontWeight: '500' }}>
+                {deepStatus.status === 'starting' && <span style={{color: '#d97706'}}>서버에 분석 요청 중...</span>}
+                {deepStatus.status === 'running' && <span style={{color: '#2563eb'}}>분석 중... ({deepStatus.target})</span>}
+                {deepStatus.status === 'done' && <span style={{color: '#16a34a'}}>✅ 분석 완료!</span>}
+                {deepStatus.status === 'error' && <span style={{color: '#dc2626'}}>❌ 실패: {deepStatus.error}</span>}
+              </div>
+            )}
+          </div>
           <div className="rep-filters">
             <div className="filter-row">
               <Icon name="Search" size={14} className="search-icon" />

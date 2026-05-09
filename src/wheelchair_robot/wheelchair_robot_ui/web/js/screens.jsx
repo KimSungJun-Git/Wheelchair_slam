@@ -1,5 +1,5 @@
 // ─── 4. Screens (Home, Search, Nav, Alert, Joystick) ──────────────
-function HomeScreen({ t, onSearch, onGoHome, onSOS }) {
+function HomeScreen({ t, onSearch, onGoHome, onSOS, onEndSession }) {
   return (
     <Frame>
       <StatusBar />
@@ -34,46 +34,17 @@ function HomeScreen({ t, onSearch, onGoHome, onSOS }) {
           </div>
         </Card>
       </div>
-      <div style={{ padding: '16px 28px 22px' }}>
-        <button onClick={onSOS} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 28px', background: TOKENS.color.danger, color: '#fff', border: 'none', borderRadius: 999, fontSize: 19, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 16px rgba(229,72,77,0.25)' }}>
+      
+      {/* ⭐ 하단 영역: 중복 제거 및 버튼 나란히 배치 */}
+      <div style={{ padding: '16px 28px 24px', display: 'flex', gap: 16 }}>
+        <button onClick={onSOS} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 28px', background: TOKENS.color.danger, color: '#fff', border: 'none', borderRadius: 999, fontSize: 19, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 16px rgba(229,72,77,0.25)' }}>
           <Icon name="sos" size={26} stroke={2.5} /> {t.sos}
         </button>
-      </div>
-      
-
-      <div style={{ padding: '16px 28px 22px', display: 'flex', gap: 12 }}>
-        <button 
-          onClick={onSOS} 
-          style={{ 
-            display: 'flex', alignItems: 'center', gap: 12, 
-            padding: '18px 28px', 
-            background: TOKENS.color.danger, 
-            color: '#fff', 
-            border: 'none', 
-            borderRadius: 999, 
-            fontSize: 19, fontWeight: 800, 
-            cursor: 'pointer', fontFamily: 'inherit', 
-            boxShadow: '0 8px 16px rgba(229,72,77,0.25)',
-            flex: 1,
-          }}
-        ></button>
-        {/* ⭐ 추가: 이용 종료 버튼 */}
-        <button 
-          onClick={onEndSession} 
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '18px 28px',
-            background: TOKENS.color.surface,
-            color: TOKENS.color.primaryDark,
-            border: `2px solid ${TOKENS.color.primaryDark}`,
-            borderRadius: 999,
-            fontSize: 19, fontWeight: 800,
-            cursor: 'pointer', fontFamily: 'inherit',
-          }}
-        >
-          <Icon name="check" size={26} stroke={2.5} /> 이용 종료
+        <button onClick={onEndSession} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 28px', background: TOKENS.color.primary, color: '#fff', border: 'none', borderRadius: 999, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 8px 16px rgba(0,47,108,0.25)' }}>
+          <Icon name="check" size={24} stroke={2.5} /> ✨ 오늘의 주행 요약
         </button>
       </div>
+
     </Frame>
   );
 }

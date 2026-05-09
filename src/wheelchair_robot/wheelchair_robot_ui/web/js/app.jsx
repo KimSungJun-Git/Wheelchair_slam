@@ -607,7 +607,8 @@ function AppInner() {
     case 'nav':      screen = <NavScreen t={t} mode={mode} distances={distances} robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onStop={stopNavigation} onManual={navToManual} onAuto={navToAuto} />; break;
     case 'alert':    screen = <AlertScreen t={t} alertReason={alertReason} robotWorld={robotWorld} mapConfig={mapConfig} onResume={resumeNav} onManual={navToManual} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onGoHomeBase={askGoHomeBase} />; break;
     case 'joystick': screen = <JoystickScreen t={t} robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} setMode={joystickToAuto} cmdVelPub={rosTopics?.cmdVelPub} />; break;
-    default:         screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} />;
+    default: screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} onEndSession={askEndSession} />;
+  
   }
   // 어디서든 정지 가능한 글로벌 정지 (진행 중 주행이 있을 때만 표시)
   // 홈 화면에서는 SOS·보호자 pill과 충돌하므로 숨김

@@ -29,11 +29,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 import subprocess
+import uuid
+from pathlib import Path
 
 # ───────────────────────── Config ─────────────────────────
 
@@ -380,6 +382,58 @@ def analyze_session():
     except Exception as e:
         from fastapi import HTTPException
         raise HTTPException(500, f"분석 실행 실패: {str(e)}")
+# --- R1 깊은 진단 (Deep Analyze) 백그라운드 작업 ---
+
+WORKSPACE_DIR = Path("/home/kim/wheelchair_ws")
+DATA_DIR = WORKSPACE_DIR / "driving_data"
+
+# 진행 상태를 메모리에 저장 (간단한 구현)
+deep_jobs = {}
+
+def _run_deep_analyze(job_id: str, json_path: str):
+    """백그라운드에서 analyze_log.py를 실행합니다."""
+    try:
+        # 터미널에서 'python3 tools/analyze_log.py <파일>'을 치는 것과 동일한 동작
+        result = subprocess.run(
+            ["python3", "tools/analyze_log.py", json_path],
+            cwd=str(WORKSPACE_DIR),
+            capture_output=True,
+            text=True,
+            timeout=600,  # 최대 10분 대기
+        )
+        deep_jobs[job_id] = {
+            "status": "done",
+            "ok": result.returncode == 0,
+            "target": Path(json_path).name,
+            "error": result.stderr[-500:] if result.returncode != 0 else None
+        }
+    except subprocess.TimeoutExpired:
+        deep_jobs[job_id] = {"status": "timeout", "ok": False, "error": "분석 시간 초과 (10분)"}
+    except Exception as e:
+        deep_jobs[job_id] = {"status": "error", "ok": False, "error": str(e)}
+
+@app.post("/api/deep_analyze")
+async def start_deep_analyze(background_tasks: BackgroundTasks):
+    """가장 최신 json 주행 로그를 찾아 분석을 시작합니다."""
+    # driving_data 폴더에서 json 파일을 시간 역순(최신순)으로 정렬
+    json_files = sorted(DATA_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    
+    if not json_files:
+        raise HTTPException(status_code=404, detail="분석할 주행 로그(.json)가 없습니다.")
+    
+    latest_file = str(json_files[0])
+    job_id = str(uuid.uuid4())
+    
+    # 상태 초기화 및 백그라운드 작업 등록
+    deep_jobs[job_id] = {"status": "running", "target": json_files[0].name}
+    background_tasks.add_task(_run_deep_analyze, job_id, latest_file)
+    
+    return {"ok": True, "job_id": job_id, "target": json_files[0].name}
+
+@app.get("/api/deep_analyze/{job_id}")
+async def get_deep_analyze_status(job_id: str):
+    """프론트엔드에서 5초마다 진행 상태를 확인할 때 호출됩니다."""
+    return deep_jobs.get(job_id, {"status": "not_found"})
 @app.post("/api/analyze/latest")
 def trigger_analysis():
     """최신 주행 로그에 대해 AI 분석 스크립트를 실행합니다."""
