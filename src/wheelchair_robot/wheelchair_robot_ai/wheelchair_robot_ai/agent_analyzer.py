@@ -226,39 +226,42 @@ def analyze_logs(state: AgentState):
     llm = ChatOllama(model="qwen2.5:7b", temperature=0.0)
     
     prompt = PromptTemplate(
-        input_variables=["logs"],
-        template="""
-[중요 규칙 - 반드시 지킬 것]
-- 반드시 한국어로만 답변하세요.
-- 영어, 중국어, 일본어, 한자(漢字)를 절대 사용하지 마세요.
-- 전문 용어도 모두 한국어로 풀어 쓰세요. (예: sensor → 센서)
-- 'pose' 필드의 위치(x, y)를 반드시 분석에 활용하세요.
-- 'reason'에 콤마로 여러 센서가 섞여 있으면 각각을 모두 언급하세요.
+    input_variables=["stats"],
+    template="""
+You are a UX analyst for autonomous wheelchair systems.
+Analyze the pre-computed statistics below and output ONLY the JSON object.
 
-[원인 분류 기준 - 반드시 지킬 것]
-- `imu_lost`, `ultrasonic_lost`, `lidar_lost`, `odom_lost`는 **센서 통신/연결 문제**입니다. 장애물이나 환경 문제가 아닙니다. 케이블·드라이버·전원을 의심하세요.
-- `imu_emergency`, `imu_기울기`는 **로봇 자세 비상**입니다. 기울기·충격·전복을 의심하세요. 장애물이 아닙니다.
-- `localization_emergency`는 **위치 추정 실패**입니다. SLAM/AMCL 신뢰도 문제이지 장애물이 아닙니다.
-- `obstacle_front`만 **실제 장애물**을 의미합니다.
-- 같은 좌표에서 반복 발생해도 위 reason이 센서 문제라면 정적 장애물이 아닙니다. 센서 자체의 반복 실패입니다.
-- 휠체어가 거의 정지 상태(좌표 변화 0.1m 미만)일 수 있으니 좌표 동일성만으로 정적 장애물을 단정하지 마세요.
+Rules:
+- Express findings as possibilities, not assertions.
+- Every finding must reference evidence from the stats.
+- If a metric is missing or zero, set "insufficient_data": true.
+- Preserve Korean destination labels (응급실/101호/102호/대기소) verbatim.
 
-당신은 자율주행 휠체어 로봇의 수석 AI 엔지니어입니다.
-아래 로그를 분석하고 반드시 아래의 마크다운 표 양식으로 대답하세요.
+[STATS]
+{stats}
 
-[운행 로그]
-{logs}
-
-## 📊 AI 디버깅 리포트
-| 항목 | 분석 결과 |
-|---|---|
-| 🎯 AI 신뢰도 | [0~100]% (반드시 숫자만 적을 것) |
-| 🚨 핵심 원인 | (1~2줄 요약, 한국어로) |
-| 🛠️ 조언 | (해결책, 한국어로) |
+[OUTPUT — JSON only, no prose]
+{{
+  "movement_pattern_summary": "",
+  "repeated_intervention_zones": [
+    {{"x": 0.0, "y": 0.0, "nearest_label": "", "count": 0, "evidence_event": ""}}
+  ],
+  "discomfort_zones": [
+    {{"x": 0.0, "y": 0.0, "reason": "", "evidence_event": "", "count": 0}}
+  ],
+  "user_control_tendency": {{
+    "prefers_low_speed": false,
+    "frequent_joystick": false,
+    "frequent_emergency_stop": false
+  }},
+  "improvement_suggestions": [],
+  "overall_stability": {{"level": "high|medium|low", "reason": ""}},
+  "insufficient_data": false
+}}
 """
-    )
+)
     chain = prompt | llm
-    response = chain.invoke({"logs": state.get("raw_logs", "")})
+    response = chain.invoke({"stats": state.get("raw_logs", "")})
     return {"analysis_report": response.content}
 
 
