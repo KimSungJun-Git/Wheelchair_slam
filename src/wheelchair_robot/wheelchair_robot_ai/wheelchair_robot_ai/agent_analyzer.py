@@ -236,6 +236,7 @@ Rules:
 - Every finding must reference evidence from the stats.
 - If a metric is missing or zero, set "insufficient_data": true.
 - Preserve Korean destination labels (응급실/101호/102호/대기소) verbatim.
+- All string values MUST be written in Korean only. NEVER use Chinese characters.
 
 [STATS]
 {stats}
@@ -243,17 +244,8 @@ Rules:
 [OUTPUT — JSON only, no prose]
 {{
   "movement_pattern_summary": "",
-  "repeated_intervention_zones": [
-    {{"x": 0.0, "y": 0.0, "nearest_label": "", "count": 0, "evidence_event": ""}}
-  ],
-  "discomfort_zones": [
-    {{"x": 0.0, "y": 0.0, "reason": "", "evidence_event": "", "count": 0}}
-  ],
-  "user_control_tendency": {{
-    "prefers_low_speed": false,
-    "frequent_joystick": false,
-    "frequent_emergency_stop": false
-  }},
+  "repeated_intervention_zones": [],
+  "discomfort_zones": [],
   "improvement_suggestions": [],
   "overall_stability": {{"level": "high|medium|low", "reason": ""}},
   "insufficient_data": false

@@ -4,7 +4,7 @@ install/
 log/
 
 # 특정 데이터 폴더 제외
-driving_data/
+#driving_data/
 
 .gitignore
 .vscode/
