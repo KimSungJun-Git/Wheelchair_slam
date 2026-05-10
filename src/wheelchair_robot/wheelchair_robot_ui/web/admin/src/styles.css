@@ -564,3 +564,114 @@ input[type="range"] { width: 100%; accent-color: var(--brand); }
   .nav-text, .brand-title, .brand-sub, .fleet-card, .logout span { display: none; }
   .rep-grid, .live-grid { grid-template-columns: 1fr; }
 }
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: var(--sidebar-bg); /* 기존 관제 시스템 배경색 활용 */
+  font-family: "Pretendard", sans-serif;
+}
+
+.login-box {
+  background: var(--surface);
+  padding: 40px;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.login-box h2 {
+  color: var(--ink);
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 24px;
+}
+
+.login-box p {
+  color: var(--ink-3);
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+.input-group {
+  margin-bottom: 15px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background-color: var(--surface-2);
+  color: var(--ink);
+  font-size: 15px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-group input:focus {
+  border-color: var(--brand);
+}
+
+.error-msg {
+  color: var(--critical);
+  font-size: 13px;
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--brand);
+  color: white;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.login-btn:hover {
+  background-color: var(--brand-2);
+}
+/* =========================================
+   보고서 탭 (기본 / 깊은 진단) 스타일
+========================================= */
+.report-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.report-tab-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ink-3);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--r-md);
+  transition: all 0.2s ease;
+}
+
+.report-tab-btn.active {
+  background: var(--brand);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.report-tab-btn:hover:not(.active) {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--line);
+}

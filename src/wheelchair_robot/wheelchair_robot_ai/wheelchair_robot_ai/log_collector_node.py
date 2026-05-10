@@ -13,50 +13,52 @@ from collections import deque, Counter
 
 class LogCollectorNode(Node):
     def __init__(self):
-        super().__init__('log_collector_node')
-        
-        # ⭐️ 링 버퍼 설정 (최대 1000개의 로그를 메모리에 유지, 오래된 것은 자동 삭제됨)
         self.log_buffer = deque(maxlen=1000) 
-        
-        # 데이터 저장 폴더
         self.save_dir = os.path.expanduser('~/wheelchair_ws/driving_data')
         os.makedirs(self.save_dir, exist_ok=True)
-        # ⭐️ 위치 정보를 저장할 변수 추가
-        self.current_x = 0.0
-        self.current_y = 0.0
-        # ⭐️ 추가: 최신 상태값 저장 (이벤트 발생 시 같이 기록)
-        self.latest_pose = {"x": None, "y": None, "yaw": None}
-        self.latest_velocity = {"linear": None, "angular": None}
-        self.latest_zone = None  # safety_stop의 현재 구역 정보
-        # ⭐️ 추가 구독 (상태 추적용 — 버퍼에 안 쌓고 최신값만 갱신)
-        self.create_subscription(Twist, '/cmd_vel', self.cmd_callback, 10)
-        self.create_subscription(String, '/current_zone', self.zone_callback, 10)
-        self.create_subscription(
-            PoseWithCovarianceStamped, '/amcl_pose', self.amcl_callback, 10)
-        self.create_subscription(Twist, '/cmd_vel', self.cmd_callback, 10)
-        self.create_subscription(String, '/current_zone', self.zone_callback, 10)
+        
         self.latest_pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}
         self.latest_velocity = {"linear": 0.0, "angular": 0.0}
         self.latest_zone = None
-        # ⭐️ 로봇의 오도메트리(위치) 토픽 구독
-        # 토픽 구독
-        self.create_subscription(String, '/safety_action', self.log_callback, 10)
-        self.create_subscription(String, '/sos_trigger', self.log_callback, 10)
+
+        # ⭐️ 구독 정리 (중복 제거)
+        self.create_subscription(Twist, '/cmd_vel', self.cmd_callback, 10)
+        self.create_subscription(String, '/current_zone', self.zone_callback, 10)
+        self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self.amcl_callback, 10)
         self.create_subscription(String, '/safety_action', self.log_callback, 10)
         self.create_subscription(String, '/sos_trigger', self.sos_callback, 10) 
         
-        # ⭐ 이번 실행 전용 단일 파일명 (한 실행 = 한 파일)
-        session_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        self.session_filename = f"[주행로그]_{session_time}.json"
-        self.session_filepath = os.path.join(self.save_dir, self.session_filename)
-        self.session_event_counter = Counter()
+        # ⭐️ 핵심 추가: UI에서 요약 버튼을 눌렀을 때 로그 파일을 분리하기 위한 토픽
+        self.create_subscription(String, '/request_log_rotation', self.rotation_callback, 10)
 
-        self.get_logger().info(f"🟢 세션 시작 → {self.session_filename}")
+        self.last_snapshot_time = {}      
+        self.snapshot_cooldown_sec = 30.0 
+        
+        # 초기 세션 생성
+        self.create_new_session()
+        self.get_logger().info(f"🟢 [스마트 블랙박스] 링 버퍼 활성화 대기 중...")
         
         self.get_logger().info(f"🟢 [스마트 블랙박스] 링 버퍼 활성화 대기 중...")
         
         self.last_snapshot_time = {}      # 이벤트별 마지막 저장 시간
         self.snapshot_cooldown_sec = 30.0 # 같은 이벤트는 30초 내 1회만 저장
+    def create_new_session(self):
+        """새로운 로그 파일을 생성하고 타겟을 변경하는 함수"""
+        session_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.session_filename = f"[주행로그]_{session_time}.json"
+        self.session_filepath = os.path.join(self.save_dir, self.session_filename)
+        self.session_event_counter = Counter()
+        self.get_logger().info(f"🟢 새 세션 시작 → {self.session_filename}")
+        
+    def rotation_callback(self, msg):
+        """웹 UI에서 요약 요청이 오면 기존 파일을 마감하고 새 파일을 엽니다."""
+        self.get_logger().info("🔄 UI 요약 요청 수신: 현재 로그 마감 및 새 파일로 분리합니다.")
+        
+        # 선택사항: 요약 버튼을 누른 순간의 직전 30초 상황도 강제로 기록하고 싶다면 활성화
+        self.save_snapshot(seconds=30, event_name="summary_requested")
+        
+        # 파일명을 새로 갱신 (이 시점 이후부터 이벤트가 터지면 새 파일에 저장됨)
+        self.create_new_session()
         
     def amcl_callback(self, msg):
         """맵 기준 절대 위치 (SLAM 사용 중)"""

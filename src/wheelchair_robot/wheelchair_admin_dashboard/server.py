@@ -178,7 +178,22 @@ def session_summary(path: Path, with_events: bool = False, with_raw: bool = Fals
             md = mp.read_text(encoding="utf-8")
         except OSError:
             md = None
-
+    deep_md = None
+    deep_mp = path.with_name(path.stem + "_r1_diagnosis.md")
+    if deep_mp.exists():
+        try:
+            deep_md = deep_mp.read_text(encoding="utf-8")
+        except OSError:
+            deep_md = None  
+    mp = md_path_for(path)
+    
+    # 2. R1 깊은 진단 보고서 경로 확인
+    deep_mp = path.with_name(path.stem + "_r1_diagnosis.md")
+    if with_events:
+        print(f"\n--- [파일 읽기 시도] ---")
+        print(f"기본 파일: {mp} (존재: {mp.exists()})")
+        print(f"깊은 진단: {deep_mp} (존재: {deep_mp.exists()})")
+        print(f"----------------------\n")
     if not logs:
         return {
             "id": session_id(path),
@@ -220,6 +235,7 @@ def session_summary(path: Path, with_events: bool = False, with_raw: bool = Fals
         out["events"] = events
         out["reasons"] = dict(reasons)
         out["markdown"] = md
+        out["deep_markdown"] = deep_md
     if with_raw:
         out["raw_lines"] = logs[:2000]
         out["raw_truncated"] = len(logs) > 2000

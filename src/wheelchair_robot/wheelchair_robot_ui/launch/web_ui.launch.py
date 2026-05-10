@@ -1,14 +1,3 @@
-# web_ui.launch.py
-# 휠체어 웹 UI 실행 launch
-#   - rosbridge_websocket (UI ↔ ROS2 통신, 9090 포트)
-#   - 정적 웹서버 (UI 파일 서빙, 기본 8000 포트, LAN 접속 허용)
-#   - 관리자용 백엔드 서버 (server.py 자동 실행)
-#
-# 사용 예:
-#   ros2 launch wheelchair_robot_ui web_ui.launch.py
-#   ros2 launch wheelchair_robot_ui web_ui.launch.py port:=8080
-#   ros2 launch wheelchair_robot_ui web_ui.launch.py use_rosbridge:=false
-#     ↑ 이미 다른 launch에서 rosbridge가 실행 중이면 false로
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -55,5 +44,11 @@ def generate_launch_description():
             cmd=['bash', '-c', 'cd ~/wheelchair_ws/src/wheelchair_robot/wheelchair_admin_dashboard && python3 server.py'],
             output='screen',
             name='admin_backend_server',
+        ),
+        Node(
+            package='wheelchair_robot_ai',
+            executable='log_collector_node',   # setup.py에 정의된 실행 파일 이름
+            name='log_collector_node',
+            output='screen'
         ),
     ])

@@ -35,7 +35,7 @@ function toKebab(s) {
   return s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
-function Sidebar({ page, setPage, mode, health }) {
+function Sidebar({ page, setPage, mode, health, onLogout }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -78,7 +78,7 @@ function Sidebar({ page, setPage, mode, health }) {
             {mode === "live" ? "localhost:8090" : "server.py 실행 시 라이브"}
           </div>
         </div>
-        <button className="logout">
+        <button className="logout" onClick={onLogout}>
           <Icon name="LogOut" size={16} />
           <span>로그아웃</span>
         </button>
@@ -144,11 +144,42 @@ function fmtClock(d) {
 }
 
 function App() {
+  // --- 1. 로그인 상태 관리 추가 ---
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return sessionStorage.getItem('admin_logged_in') === 'true';
+  });
+
   const [page, setPage] = useState("overview");
   const [mode, setMode] = useState("sample");
   const [health, setHealth] = useState(null);
 
+  // --- 2. 새로고침 시 로그인 상태 확인 ---
+  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  // --- 3. 로그인 / 로그아웃 처리 함수 ---
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (userId === 'smac' && password === '0000') {
+      setIsLoggedIn(true);
+      sessionStorage.setItem('admin_logged_in', 'true');
+      setLoginError('');
+    } else {
+      setLoginError('아이디 또는 비밀번호가 올바르지 않습니다.');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    sessionStorage.removeItem('admin_logged_in');
+    setUserId('');
+    setPassword('');
+  };
+
+  // 기존 API 헬스체크
   useEffect(() => {
+    if (!isLoggedIn) return; // 로그인 전에는 백엔드 통신 안 함
+    
     let alive = true;
     (async () => {
       const m = await window.Api.getMode();
@@ -160,11 +191,47 @@ function App() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [isLoggedIn]); // 로그인 상태가 바뀔 때 다시 실행
 
+
+  // --- 4. 렌더링 분기: 로그인이 안 되어 있으면 로그인 화면 렌더링 ---
+  if (!isLoggedIn) {
+    return (
+      <div className="login-container">
+        <div className="login-box">
+          <h2>SMAC 관제 시스템</h2>
+          <p>관리자 계정으로 로그인하세요</p>
+          <form onSubmit={handleLogin}>
+            <div className="input-group">
+              <input 
+                type="text" 
+                placeholder="아이디" 
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="input-group">
+              <input 
+                type="password" 
+                placeholder="비밀번호" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {loginError && <div className="error-msg">{loginError}</div>}
+            <button type="submit" className="login-btn">로그인</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- 5. 로그인 성공 시 기존 대시보드 렌더링 ---
   return (
     <div className="app" data-screen-label={`Mobicare · ${page}`}>
-      <Sidebar page={page} setPage={setPage} mode={mode} health={health} />
+      {/* Sidebar 컴포넌트에 로그아웃 함수를 전달합니다 */}
+      <Sidebar page={page} setPage={setPage} mode={mode} health={health} onLogout={handleLogout} />
       <div className="main">
         <Header page={page} mode={mode} health={health} />
         <div className="content">

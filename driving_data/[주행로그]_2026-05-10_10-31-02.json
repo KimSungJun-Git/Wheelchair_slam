@@ -1,0 +1,6 @@
+{"_event_marker": true, "event_type": "blocked", "event_label": "비상정지", "timestamp": 1778376688.072389, "snapshot_size": 1}
+{"action": "blocked", "reason": "가상_장애물_테스트", "timestamp": 1778376688.0718837, "pose": {"x": 0.0, "y": 0.0, "yaw": 0.0}, "velocity": {"linear": 0.0, "angular": 0.0}, "zone": null}
+{"_event_marker": true, "event_type": "sos", "event_label": "SOS", "timestamp": 1778376693.5905316, "snapshot_size": 3}
+{"action": "blocked", "reason": "가상_장애물_테스트", "timestamp": 1778376688.0718837, "pose": {"x": 0.0, "y": 0.0, "yaw": 0.0}, "velocity": {"linear": 0.0, "angular": 0.0}, "zone": null}
+{"action": "blocked", "reason": "가상_장애물_테스트", "timestamp": 1778376688.073117, "pose": {"x": 0.0, "y": 0.0, "yaw": 0.0}, "velocity": {"linear": 0.0, "angular": 0.0}, "zone": null}
+{"source": "sos_trigger", "action": "sos", "reason": "테스트_버튼_눌림", "timestamp": 1778376693.5899687}

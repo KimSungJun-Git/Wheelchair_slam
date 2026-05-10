@@ -41,6 +41,7 @@ function ReportCard({ r, active, onClick }) {
     </button>
   );
 }
+
 function ReportsPage() {
   const [list, setList] = useStateR([]);
   const [selectedId, setSelectedId] = useStateR(null);
@@ -48,46 +49,55 @@ function ReportsPage() {
   const [showRaw, setShowRaw] = useStateR(false);
   const [filter, setFilter] = useStateR({ severity: "all", minConf: 0, q: "" });
   const [shareOpen, setShareOpen] = useStateR(false);
-
-  // ▼▼▼ 새롭게 추가된 상태 및 함수 (상대경로 적용 완료!) ▼▼▼
   const [deepStatus, setDeepStatus] = useStateR(null);
 
   const runDeepAnalyze = async () => {
     setDeepStatus({ status: 'starting' });
+
     try {
-      // http://localhost:8090 을 지우고 상대경로로 변경!
-        const res = await fetch(`http://${window.location.hostname}:8090/api/deep_analyze`, { method: 'POST' });      if (!res.ok) {
+      if (window.ros && window.ROSLIB) {
+        const rotationTopic = new window.ROSLIB.Topic({
+          ros: window.ros,
+          name: '/request_log_rotation',
+          messageType: 'std_msgs/String'
+        });
+        rotationTopic.publish(new window.ROSLIB.Message({ data: 'rotate' }));
+        console.log("🔄 로그 파일 분리 요청 전송 완료! 백그라운드 수집을 유지한 채 분석을 시작합니다.");
+      } else {
+        console.warn("⚠️ ROS 연결 객체(window.ros)를 찾을 수 없어 로그 파일 분리를 건너뜁니다.");
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const res = await fetch(`http://${window.location.hostname}:8090/api/deep_analyze`, { method: 'POST' });
+      if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         setDeepStatus({ status: 'error', error: errData.detail || '서버 에러 발생' });
         return;
       }
-      
+
       const data = await res.json();
       const { job_id, target } = data;
       setDeepStatus({ status: 'running', target });
-      
+
       const poll = setInterval(async () => {
-        // 여기도 상대경로로 변경!
-      const statusRes = await fetch(`http://${window.location.hostname}:8090/api/deep_analyze/${job_id}`);        const statusData = await statusRes.json();
-        
+        const statusRes = await fetch(`http://${window.location.hostname}:8090/api/deep_analyze/${job_id}`);
+        const statusData = await statusRes.json();
+
         if (statusData.status === 'done') {
           clearInterval(poll);
           setDeepStatus({ status: 'done', ok: statusData.ok, target: statusData.target });
-          
-          // 분석 완료 후 최신 보고서 목록 갱신
           window.Api.getReports().then((d) => setList(d.reports || []));
-          
         } else if (statusData.status === 'error' || statusData.status === 'timeout') {
           clearInterval(poll);
           setDeepStatus({ status: 'error', error: statusData.error });
         }
       }, 5000);
-      
+
     } catch (error) {
       setDeepStatus({ status: 'error', error: error.message });
     }
   };
-  // ▲▲▲ 추가 끝 ▲▲▲
 
   useEffectR(() => {
     window.Api.getReports().then((d) => {
@@ -120,18 +130,17 @@ function ReportsPage() {
     <div className="page reports">
       <div className="rep-grid">
         <div className="rep-left">
-          
-          {/* ▼▼▼ 진단 버튼 UI 추가 부분 ▼▼▼ */}
+
           <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f8fafc' }}>
-            <button 
-              className="btn primary" 
+            <button
+              className="btn primary"
               onClick={runDeepAnalyze}
               disabled={deepStatus?.status === 'running' || deepStatus?.status === 'starting'}
               style={{ width: '100%', justifyContent: 'center' }}
             >
               🤖 최신 로그 R1 깊은 진단
             </button>
-            
+
             {deepStatus && (
               <div style={{ marginTop: '10px', fontSize: '13px', fontWeight: '500' }}>
                 {deepStatus.status === 'starting' && <span style={{color: '#d97706'}}>서버에 분석 요청 중...</span>}
@@ -141,7 +150,6 @@ function ReportsPage() {
               </div>
             )}
           </div>
-          {/* ▲▲▲ 진단 버튼 UI 추가 끝 ▲▲▲ */}
 
           <div className="rep-filters">
             <div className="filter-row">
@@ -214,13 +222,14 @@ function ReportsPage() {
 }
 
 function ReportDetail({ report, showRaw, setShowRaw, shareOpen, setShareOpen }) {
+  const [activeTab, setActiveTab] = useStateR('basic');
+
   const counts = report.counts || {};
   const critical = (counts.blocked || 0) + (counts.sos || 0);
   const warning = counts.modified || 0;
   const sev = critical > 0 ? "critical" : warning > 0 ? "warning" : "info";
 
   const md = report.markdown || "";
-  // Strip the AI confidence row from the table for prettier render (we surface it big)
   const cleanedMd = md;
 
   const html = useMemoR(() => {
@@ -279,17 +288,52 @@ function ReportDetail({ report, showRaw, setShowRaw, shareOpen, setShareOpen }) 
         </div>
       )}
 
+      {/* --- 원본 로그 보기 vs 탭 보고서 보기 --- */}
       {showRaw ? (
         <div className="raw-pane">
           <div className="raw-head">
-            <span>{report.raw_lines?.length || 0}줄 표시{report.raw_truncated ? " (절단됨)" : ""}</span>
+            <span>{report?.raw_lines?.length || 0}줄 표시{report?.raw_truncated ? " (절단됨)" : ""}</span>
           </div>
           <pre className="raw-pre">
-            {(report.raw_lines || []).map((l, i) => JSON.stringify(l)).join("\n")}
+            {(report?.raw_lines || []).map((l, i) => JSON.stringify(l)).join("\n")}
           </pre>
         </div>
       ) : (
-        <div className="md-body" dangerouslySetInnerHTML={{ __html: html }} />
+        <>
+          <div className="report-tabs" style={{ marginBottom: '15px', borderBottom: '1px solid var(--line)', display: 'flex', gap: '10px' }}>
+            <button
+              className={`report-tab-btn ${activeTab === 'basic' ? 'active' : ''}`}
+              onClick={() => setActiveTab('basic')}
+            >
+              📄 기본 보고서
+            </button>
+            <button
+              className={`report-tab-btn ${activeTab === 'deep' ? 'active' : ''}`}
+              onClick={() => setActiveTab('deep')}
+            >
+              🤖 R1 깊은 진단 보고서
+            </button>
+          </div>
+
+          <div className="md-body">
+            {(() => {
+              const targetMd = activeTab === 'basic'
+                ? (report?.markdown || "기본 보고서 데이터를 불러오지 못했습니다.")
+                : (report?.deep_markdown || "깊은 진단 보고서가 아직 생성되지 않았습니다.");
+
+              let html = targetMd;
+              if (window.marked) {
+                if (typeof window.marked.parse === 'function') {
+                  html = window.marked.parse(targetMd);
+                } else if (typeof window.marked === 'function') {
+                  html = window.marked(targetMd);
+                }
+              }
+
+              return <div dangerouslySetInnerHTML={{ __html: html }} />;
+            })()}
+          </div>
+        </>
       )}
 
       {shareOpen && (
