@@ -38,8 +38,7 @@ Every finding is required to cite actual statistics, not speculation.
 ### Admin dashboard
 Three pages for caregivers and operators:
 - **Overview** — event statistics by time window / hour / weekday / reason, plus a SLAM coordinate heatmap
-- **AI Reports** — session cards, rendered Markdown report, confidence bar, guardian-share dialog
-- **Live Monitor** — current pose, recent trail, last 30 events streamed in, with a one-click remote stop
+- **AI Reports** — Session cards, dual-tab rendered Markdown reports (Basic Summary vs. R1 Deep Diagnosis), confidence bar, and guardian-share dialog. The operator can trigger a deep analysis of the latest session directly from the UI.- **Live Monitor** — current pose, recent trail, last 30 events streamed in, with a one-click remote stop
 
 ---
 
