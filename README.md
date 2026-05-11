@@ -89,13 +89,6 @@ A single launch file (`wheelchair_robot_ui/launch/web_ui.launch.py`) starts rosb
 
 ## 3. How to run
 
-### Build
-```bash
-ssh pi@172.16.24.154
-rm -rf build/wheelchair_robot_ui install/wheelchair_robot_ui
-colcon build --packages-select wheelchair_robot_ui --symlink-install
-```
-
 ### Raspberry Pi (sensor layer)
 ```bash
 # IMU
