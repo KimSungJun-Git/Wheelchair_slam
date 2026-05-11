@@ -31,7 +31,6 @@ Every safety event is automatically recorded (with duplicate-message removal and
 - Discomfort zones for the rider
 - Improvement suggestions
 - Overall stability assessment (high / medium / low)
-- **AI confidence score** (a banner warns when it falls below 50%)
 
 Every finding is required to cite actual statistics, not speculation.
 
@@ -69,7 +68,7 @@ Keyboard teleop, remapped to `cmd_vel_teleop` so it only takes effect in manual 
 
 ### AI pipeline (`wheelchair_robot_ai`)
 - `log_collector_node` — writes every safety event to `~/wheelchair_ws/driving_data/*.json` as JSONL
-- `agent_analyzer` — LangGraph + Ollama (Qwen2.5:7b) workflow producing the Korean report
+- `agent_analyzer` — LangGraph + Ollama dual-agent (Qwen2.5 & DeepSeek-R1) workflow producing event summaries (`_report.md`) and in-depth root cause diagnoses (`_diagnosis.md`)
 
 ### Web UI — rider (`wheelchair_robot_ui`)
 - React + rosbridge_websocket (`ws://localhost:9090`)
@@ -120,9 +119,7 @@ ros2 run wheelchair_robot_control imu_safety_node
 # Terminal 6: secondary localization watchdog
 ros2 run wheelchair_robot_control localization_monitor_node
 
-# Terminal 7: AI analysis pipeline
-./run_all.sh
-```
+
 
 ### Web UI
 ```bash
@@ -159,7 +156,6 @@ ros2 launch wheelchair_robot_ui web_ui.launch.py
 - `/api/live` currently polls the last line of the most recent JSON file. Switching to SSE / WebSocket push is planned for true real-time.
 - The remote-stop button is fully wired in the UI; the topic publish path goes through rosbridge or an `rclpy` node embedded in `server.py`.
 - The guardian-share dialog is built; SMTP / KakaoTalk notification adapters will be added under `POST /api/share/{report_id}`.
-- For demos, `fake_alerts.sh` publishes six representative alert scenarios at 15-second intervals.
 
 ---
 
