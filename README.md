@@ -12,7 +12,7 @@ The rider taps a destination (patient room, ER, standby area, etc.). The wheelch
 ### Multi-layer safety
 Four hazards are monitored simultaneously while driving:
 - Tilt and impact on the wheelchair body
-- Proximity in five directions (front / front-left / left / front-right / right) with graded color warnings
+Proximity in three directions (front / left / right) with graded color
 - Localization loss (with a second-line monitor node for confirmation)
 - Entry into keepout zones
 
