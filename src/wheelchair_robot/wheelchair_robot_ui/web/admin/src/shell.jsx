@@ -142,22 +142,98 @@ function fmtClock(d) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
+// --- 새로 추가: 실시간 팝업 컴포넌트 ---
+function ToastAlerts({ alerts, removeAlert }) {
+  return (
+    <div className="toast-container">
+      {alerts.map(alert => (
+        <div key={alert.id} className={`toast-box ${alert.type}`}>
+          <div className="toast-icon">
+            <Icon name={alert.type === 'sos' ? 'Siren' : 'AlertTriangle'} size={24} />
+          </div>
+          <div className="toast-content">
+            <strong>{alert.title}</strong>
+            <p>{alert.message}</p>
+            <span className="toast-time">{alert.time}</span>
+          </div>
+          <button className="toast-close" onClick={() => removeAlert(alert.id)}>
+            <Icon name="X" size={18} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
+// --- 메인 App 컴포넌트 ---
 function App() {
-  // --- 1. 로그인 상태 관리 추가 ---
+  // 1. 로그인 상태 관리 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return sessionStorage.getItem('admin_logged_in') === 'true';
   });
+  
+  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
+  // 2. 대시보드 상태 관리
   const [page, setPage] = useState("overview");
   const [mode, setMode] = useState("sample");
   const [health, setHealth] = useState(null);
 
-  // --- 2. 새로고침 시 로그인 상태 확인 ---
-  const [userId, setUserId] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-  // --- 3. 로그인 / 로그아웃 처리 함수 ---
+  // ⭐️ 3. 알림(Toast) 상태 관리 ⭐️
+  const [alerts, setAlerts] = useState([]);
+
+  // 알림을 추가하는 함수 (8초 뒤 자동 삭제)
+  const addAlert = (type, title, message) => {
+    const id = Date.now() + Math.random();
+    const time = new Date().toLocaleTimeString('ko-KR');
+    setAlerts(prev => [...prev, { id, type, title, message, time }]);
+
+    setTimeout(() => {
+      setAlerts(prev => prev.filter(a => a.id !== id));
+    }, 8000);
+  };
+
+  // ⭐️ 4. ROS 2 토픽 구독 (SOS 및 비상정지 실시간 감지) ⭐️
+  useEffect(() => {
+    if (!isLoggedIn || !window.ros || !window.ROSLIB) return;
+
+    // SOS 버튼 감지
+    const sosListener = new window.ROSLIB.Topic({
+      ros: window.ros,
+      name: '/sos_trigger',
+      messageType: 'std_msgs/String'
+    });
+
+    // 비상정지(에러) 감지
+    const safetyListener = new window.ROSLIB.Topic({
+      ros: window.ros,
+      name: '/safety_action',
+      messageType: 'std_msgs/String'
+    });
+
+    sosListener.subscribe((msg) => {
+      addAlert('sos', '🚨 환자 SOS 긴급 호출!', `환자가 구조를 요청했습니다: ${msg.data}`);
+    });
+
+    safetyListener.subscribe((msg) => {
+      try {
+        const data = JSON.parse(msg.data);
+        if (data.action === 'blocked') {
+           addAlert('error', '⚠️ 휠체어 비상 정지', `센서 오류 및 장애물 감지: ${data.reason}`);
+        }
+      } catch(e) {}
+    });
+
+    // 컴포넌트 종료 시 구독 해제
+    return () => {
+      sosListener.unsubscribe();
+      safetyListener.unsubscribe();
+    };
+  }, [isLoggedIn]); // 로그인 했을 때만 연결
+
+  // 로그인 처리 함수
   const handleLogin = (e) => {
     e.preventDefault();
     if (userId === 'smac' && password === '0000') {
@@ -176,10 +252,9 @@ function App() {
     setPassword('');
   };
 
-  // 기존 API 헬스체크
+  // 기존 백엔드 API 헬스체크
   useEffect(() => {
-    if (!isLoggedIn) return; // 로그인 전에는 백엔드 통신 안 함
-    
+    if (!isLoggedIn) return;
     let alive = true;
     (async () => {
       const m = await window.Api.getMode();
@@ -188,36 +263,24 @@ function App() {
       setMode(m);
       setHealth(h);
     })();
-    return () => {
-      alive = false;
-    };
-  }, [isLoggedIn]); // 로그인 상태가 바뀔 때 다시 실행
+    return () => { alive = false; };
+  }, [isLoggedIn]);
 
 
-  // --- 4. 렌더링 분기: 로그인이 안 되어 있으면 로그인 화면 렌더링 ---
+  // --- 로그인 화면 렌더링 ---
   if (!isLoggedIn) {
     return (
       <div className="login-container">
+        {/* ... (기존 로그인 UI 화면 동일) ... */}
         <div className="login-box">
           <h2>SMAC 관제 시스템</h2>
           <p>관리자 계정으로 로그인하세요</p>
           <form onSubmit={handleLogin}>
             <div className="input-group">
-              <input 
-                type="text" 
-                placeholder="아이디" 
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                autoFocus
-              />
+              <input type="text" placeholder="아이디" value={userId} onChange={(e) => setUserId(e.target.value)} autoFocus />
             </div>
             <div className="input-group">
-              <input 
-                type="password" 
-                placeholder="비밀번호" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <input type="password" placeholder="비밀번호" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             {loginError && <div className="error-msg">{loginError}</div>}
             <button type="submit" className="login-btn">로그인</button>
@@ -227,10 +290,13 @@ function App() {
     );
   }
 
-  // --- 5. 로그인 성공 시 기존 대시보드 렌더링 ---
+  // --- 대시보드 화면 렌더링 ---
   return (
     <div className="app" data-screen-label={`Mobicare · ${page}`}>
-      {/* Sidebar 컴포넌트에 로그아웃 함수를 전달합니다 */}
+      
+      {/* ⭐️ 실시간 팝업 알림 렌더링 (화면 맨 위에 떠있음) ⭐️ */}
+      <ToastAlerts alerts={alerts} removeAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} />
+
       <Sidebar page={page} setPage={setPage} mode={mode} health={health} onLogout={handleLogout} />
       <div className="main">
         <Header page={page} mode={mode} health={health} />
