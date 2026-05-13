@@ -14,47 +14,256 @@ model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2", device="cpu
 client = chromadb.PersistentClient(path=str(DB_PATH))
 collection = client.get_collection("wheelchair_ctx")
 
-SYSTEM_PROMPT = """You are debugging the wheelchair_robot ROS2 Nav2 system.
+SYSTEM_PROMPT = """
+You are debugging and analyzing an autonomous wheelchair ROS2/Nav2 system.
 
-Project context (auto-retrieved from the actual codebase):
+Project Context:
 {context}
 
-ANALYSIS PRINCIPLES:
-1. Only flag REAL safety events: blocked, sos, imu_emergency, imu_lost,
-   ultrasonic_lost, lidar_lost, odom_lost, localization_emergency.
-2. Ignore the following — they are NORMAL behavior, not problems:
-   - "allowed" events (the robot is moving correctly)
-   - Small variations in F/L/R distance readings (lidar/ultrasonic noise)
-   - Angular velocity changes (the robot is turning)
-   - Korean text in zone field (e.g. "일반구역" means "normal zone" — NOT an error)
-3. If the session has NO blocked/sos/emergency events, it is a CLEAN session.
-   Write "None observed" for problem-related sections. DO NOT invent issues.
-4. Reference specific node names (mode_switch_node, safety_stop_node) and
-   exact `time` values from the logs. Output in English."""
+SYSTEM CONFIGURATION:
+System:
+  Drive Mode: "Autonomous"
+  Map Mode: "Localization"
+  Software Version: "v1.4.2"
 
-USER_TEMPLATE = """LOGS:
+Hardware:
+  Platform: "Autonomous Wheelchair"
+  Sensors:
+    - LiDAR
+    - IMU
+    - Ultrasonic Sensor
+    - Encoder
+    - Camera
+
+ANALYSIS PRINCIPLES:
+1. Only detect REAL safety-critical events:
+   - blocked
+   - sos
+   - imu_emergency
+   - imu_lost
+   - ultrasonic_lost
+   - lidar_lost
+   - odom_lost
+   - localization_emergency
+
+2. Ignore NORMAL robot behavior:
+   - "allowed" events
+   - normal steering/angular velocity changes
+   - small LiDAR/Ultrasonic fluctuations
+   - normal localization corrections
+   - Korean zone names such as "일반구역" (normal zone)
+
+3. If NO critical safety event exists:
+   - Mark the session as CLEAN
+   - Write "None observed" in related sections
+   - Never invent issues
+
+CRITICAL CONTRADICTION CHECK: 
+If you mention "SOS", "blocked", or "emergency" anywhere in your summary, YOU MUST LIST THEIR EXACT TIMESTAMPS in Section 2 and analyze them in Section 4. Do NOT say "No critical events occurred" if you found an SOS or blocked event.
+
+4. Use exact references from the logs:
+   - node names
+   - timestamps (`time`)
+
+5. Cross-validate sensors:
+   - Determine whether the issue is:
+     a) real physical obstacle
+     b) sensor noise
+     c) localization instability
+     d) emergency logic overreaction
+
+6. Evaluate response latency:
+   - obstacle detection timing
+   - slowdown timing
+   - blocked/SOS timing
+   - recovery timing
+
+7. Focus on passenger safety:
+   - sudden stop risk
+   - collision possibility
+   - passenger instability
+   - excessive jerk
+
+8. Include ROS2/Nav2 technical analysis:
+   - costmap tuning (inflation radius, obstacle layer behavior)
+   - controller frequency
+   - EKF tuning & sensor fusion reliability
+   - QoS delays & callback timing
+
+9. Include hardware maintenance analysis:
+   - motor encoder health
+   - caster wheel condition
+   - cable communication stability
+   - LiDAR cleanliness
+   - ultrasonic sensor alignment
+
+10. Distinguish the root cause between:
+   - software issue
+   - sensor issue
+   - hardware issue
+   - environmental issue
+
+11. Prioritize realistic robotics engineering analysis.
+Do NOT generate generic AI explanations. Write strictly in English.
+"""
+
+USER_TEMPLATE = """
+SESSION LOGS:
 {logs}
 
 OUTPUT FORMAT (MANDATORY):
 
-## 1. Timeline
-List ONLY blocked/sos/emergency events using the `time` field.
-If none exist, write "No critical events in this session."
+# Autonomous Wheelchair Log Analysis Report
 
-## 2. Critical Problems
+## 1. Session Overview
+Provide a brief summary of the session:
+- Overall driving status
+- Driving stability
+- Occurrence of emergency events
+- Overall system health
 
-## 3. Root Causes
-Mark each with confidence: [HIGH] / [MEDIUM] / [LOW]
+---
 
-## 4. Safety Risks
+## 2. Timeline & Latency Analysis
+Rules:
+- Analyze only blocked/sos/emergency events.
+- Must use exact `time` values.
+- Include analysis of delay times between events.
+- Analyze the flow: obstacle → slowdown → emergency.
 
-## 5. Code Fixes
+Include:
+- Chronological order of events
+- Reaction speed
+- Potential control delays
+- Emergency response latency
 
-## 6. Parameter Changes
+If no events occurred:
+"No critical events occurred during this session."
 
-If a section has no content, write exactly "None observed".
-DO NOT invent issues from "allowed" events or normal sensor noise.
-Begin with `## 1. Timeline` immediately."""
+---
+
+## 3. Critical Problem Analysis (Sensor Cross-Validation)
+Multi-sensor based analysis:
+- LiDAR
+- IMU
+- Ultrasonic
+- Encoder
+
+Analysis details:
+- Is it a real collision risk?
+- Is it sensor noise?
+- Is it a localization issue?
+- Is it a false positive?
+
+Mandatory:
+- Cross-validate sensor data to explain the situation.
+- Perform logic-based analysis, not mere assumptions.
+
+If no issues:
+"None observed"
+
+---
+
+## 4. Root Cause Analysis
+Analyze each cause using the format below:
+
+- [HIGH] 
+- [MEDIUM] 
+- [LOW] 
+
+Cause types:
+- Sensor issue
+- Software issue
+- Environmental issue
+- Hardware issue
+- Nav2 configuration issue
+
+Mandatory: Must be based on actual logs.
+
+---
+
+## 5. Safety Risks & Maintenance Checklist
+Include:
+- Passenger risk level
+- Risk of sudden stops
+- Collision probability
+- Rollover possibility
+
+Maintenance items:
+- LiDAR condition
+- Ultrasonic sensor alignment
+- Encoder status
+- Caster wheels
+- Communication cables
+- IMU calibration status
+
+If no issues:
+"None observed"
+
+---
+
+## 6. Code Fix Proposals
+Write in an actionable format:
+- Debug logging
+- Filtering logic
+- Debounce
+- Hysteresis
+- Watchdog
+- Timeout handling
+
+If possible:
+- Include specific ROS2 node names.
+- Include Nav2-related code improvements.
+
+If no issues:
+"None observed"
+
+---
+
+## 7. ROS2 / Nav2 / EKF Improvement Suggestions
+Include specific parameter suggestions:
+- inflation_radius
+- obstacle_range
+- raytrace_range
+- controller_frequency
+- EKF sensor weights
+- QoS settings
+
+Include:
+- Why it is necessary
+- What effect it will have
+
+Example:
+- Reduction of unnecessary emergency stops
+- Stabilization of obstacle detection
+- Reduction of localization drift
+
+If no issues:
+"None observed"
+
+---
+
+## 8. Final Summary
+Briefly summarize:
+- The most critical issue
+- Actual risk level
+- Priority items to fix
+- System stability evaluation
+
+If the session is normal:
+"Overall, it was a stable autonomous driving session."
+
+IMPORTANT RULES:
+- NEVER analyze "allowed" events as problems.
+- NEVER exaggerate normal sensor noise as a problem.
+- Analyze based ONLY on actual logs.
+- DO NOT invent issues.
+- Analyze at the level of an actual ROS2/Nav2 engineer.
+- ALL output MUST be in English.
+
+Begin immediately with:
+# Autonomous Wheelchair Log Analysis Report
+"""
 
 def dedupe_log(raw):
     unique, last_pose = [], None
@@ -64,7 +273,7 @@ def dedupe_log(raw):
             ts = e.get("timestamp")
             if isinstance(ts, (int, float)):
                 e["time"] = datetime.fromtimestamp(ts).strftime("%H:%M:%S.%f")[:-3]
-                e.pop("timestamp", None)  # raw 숫자 제거 → R1 혼란 방지
+                e.pop("timestamp", None)
             if e.get("source") != "Navigation" or e.get("pose") != last_pose:
                 unique.append(json.dumps(e, ensure_ascii=False))
                 last_pose = e.get("pose")
@@ -102,7 +311,6 @@ def filter_critical_events(log_text):
         except Exception:
             if line.strip():
                 critical.append(line)
-    # critical 전부 + allowed 샘플 5개만 (중복 라이다 데이터 노이즈 방지)
     return '\n'.join(critical + allowed_sample[-5:])
 
 def get_context(log_text, top_k=5):
@@ -116,14 +324,19 @@ def get_context(log_text, top_k=5):
     return "\n---\n".join(docs[0])
 
 def analyze(log_path):
-    raw = Path(log_path).read_text()
+    raw = Path(log_path).read_text(encoding="utf-8")
     log_excerpt = dedupe_log(raw)
     log_excerpt = filter_critical_events(log_excerpt)
 
-    # critical 이벤트가 0개면 일찍 종료
+    # 1. 치명적 이벤트 개수 카운트
     critical_count = sum(1 for line in log_excerpt.split('\n')
-                         if '"action": "blocked"' in line or '"action": "sos"' in line)
+                         if any(k in line for k in ["blocked", "sos", "emergency", "lost", "sos_trigger"]))
     print(f"📊 Critical events found: {critical_count}")
+
+    # 2. 치명적 이벤트가 하나도 없다면, AI가 환각을 일으키지 않도록 강제 클린 문자열로 교체
+    if critical_count == 0:
+        log_excerpt = "CLEAN_SESSION_NO_ERRORS"
+        print("✅ No critical errors found. Passing clean session flag to AI.")
 
     context = get_context(log_excerpt, top_k=5)
 
@@ -154,7 +367,7 @@ def analyze(log_path):
             thinking = m.group(1).strip()
             answer = re.sub(r'<think>.*?</think>', '', answer, flags=re.DOTALL).strip()
 
-    THINK_LOG.write_text(thinking if thinking else "(no thinking returned)")
+    THINK_LOG.write_text(thinking if thinking else "(no thinking returned)", encoding="utf-8")
 
     print("\n" + "=" * 60)
     print(answer)

@@ -42,7 +42,7 @@ function ReportCard({ r, active, onClick }) {
   );
 }
 
-function ReportsPage() {
+function ReportsPage({lang}) {
   const [list, setList] = useStateR([]);
   const [selectedId, setSelectedId] = useStateR(null);
   const [detail, setDetail] = useStateR(null);
@@ -126,8 +126,9 @@ function ReportsPage() {
               disabled={deepStatus?.status === 'running' || deepStatus?.status === 'starting'}
               style={{ width: '100%', justifyContent: 'center' }}
             >
-              🤖 최신 로그 R1 깊은 진단
+              🤖 {dict[lang].btn_deep_analyze || "최신 로그 R1 깊은 진단"}
             </button>
+            
             
             {deepStatus && (
               <div style={{ marginTop: '10px', fontSize: '13px', fontWeight: '500' }}>

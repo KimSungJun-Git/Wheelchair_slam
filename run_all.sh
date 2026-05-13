@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# ⭐️ 추가된 핵심 코드: 워크스페이스 환경 변수 불러오기
 source /opt/ros/humble/setup.bash
 source ~/wheelchair_ws/install/setup.bash
 

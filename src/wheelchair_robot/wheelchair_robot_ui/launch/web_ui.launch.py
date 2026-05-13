@@ -23,7 +23,6 @@ def generate_launch_description():
             description='웹 UI 정적 서버 포트',
         ),
 
-        # rosbridge_websocket: UI(브라우저)와 ROS2 사이의 WebSocket 브리지
         Node(
             package='rosbridge_server',
             executable='rosbridge_websocket',
@@ -32,14 +31,12 @@ def generate_launch_description():
             condition=IfCondition(use_rosbridge),
         ),
 
-        # 정적 웹서버: UI HTML/JS 파일 서빙
         ExecuteProcess(
             cmd=['python3', '-m', 'http.server', port, '-d', web_dir, '-b', '0.0.0.0'],
             output='screen',
             name='wheelchair_ui_server',
         ),
 
-        # 관리자 대시보드 백엔드 데이터 서버 (server.py)
         ExecuteProcess(
             cmd=['bash', '-c', 'cd ~/wheelchair_ws/src/wheelchair_robot/wheelchair_admin_dashboard && python3 server.py'],
             output='screen',
@@ -47,7 +44,7 @@ def generate_launch_description():
         ),
         Node(
             package='wheelchair_robot_ai',
-            executable='log_collector_node',   # setup.py에 정의된 실행 파일 이름
+            executable='log_collector_node',   
             name='log_collector_node',
             output='screen'
         ),

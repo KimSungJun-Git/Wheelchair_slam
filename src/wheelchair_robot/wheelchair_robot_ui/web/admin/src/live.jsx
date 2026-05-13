@@ -75,10 +75,8 @@ function LivePage() {
   const [stopped, setStopped] = useS(false);
   const seenRef = useR(new Set());
   
-  // 분석 상태 관리
   const [analyzing, setAnalyzing] = useS(false);
 
-  // 일과 마감 함수
   const handleEndSession = async () => {
     if (confirm("현재 주행 세션을 마감하고 지금까지의 로그로 AI 진단을 시작하시겠습니까?")) {
       setAnalyzing(true);

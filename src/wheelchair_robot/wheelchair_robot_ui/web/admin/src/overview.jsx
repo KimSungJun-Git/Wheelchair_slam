@@ -16,7 +16,6 @@ function StatCard({ label, value, sub, accent, foot, icon }) {
 }
 
 function HeatMap({ events }) {
-  // Plot events on a coordinate plane normalized to a 320x220 viewport
   const pts = events.filter((e) => e.pose && e.pose.x != null && e.pose.y != null);
   if (!pts.length) {
     return (
@@ -42,7 +41,6 @@ function HeatMap({ events }) {
     H - ((y - y0) / (y1 - y0)) * H,
   ];
 
-  // Group nearby points to size dot by frequency
   const buckets = new Map();
   for (const p of pts) {
     const k = `${Math.round(p.pose.x * 10)}_${Math.round(p.pose.y * 10)}`;

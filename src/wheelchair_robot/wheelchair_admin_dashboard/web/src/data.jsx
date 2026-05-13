@@ -11,7 +11,29 @@ const REPORT_SUMMARIES = [
   { title: "도킹 실패 후 재시도 성공", body: "충전 도크 정렬 실패 1회 후 재시도하여 정상 도킹 완료." },
   { title: "복도 좌회전 시 진동 이상", body: "복도 A-1 좌회전 구간에서 캐스터 진동 감지. 정비 권장." },
 ];
-
+// web/src/data.jsx
+export const dict = {
+  ko: {
+    title: "자율주행 휠체어 관제",
+    tab_overview: "대시보드",
+    tab_live: "실시간 모니터링",
+    tab_reports: "진단 보고서",
+    btn_stop: "원격 정지 실행",
+    status_moving: "이동 중",
+    status_stopped: "정지됨",
+    // 필요한 텍스트를 계속 추가하세요...
+  },
+  en: {
+    title: "Autonomous Wheelchair Control",
+    tab_overview: "Overview",
+    tab_live: "Live Monitor",
+    tab_reports: "Diagnostics",
+    btn_stop: "Execute Remote Stop",
+    status_moving: "Moving",
+    status_stopped: "Stopped",
+    // 필요한 텍스트를 계속 추가하세요...
+  }
+};
 const LEVELS = ["fatal", "warning", "warning", "warning", "warning", "warning"];
 
 function makeReports(n = 24) {

@@ -1,21 +1,5 @@
 #!/usr/bin/env python3
-"""
-server.py — Wheelchair Admin Dashboard 백엔드 어댑터.
 
-실행:
-    pip install fastapi uvicorn
-    python3 server.py
-
-엔드포인트:
-    GET /api/health             폴더 상태·세션 개수
-    GET /api/reports            보고서 목록 (메타만)
-    GET /api/report/{id}        세션 상세 (JSON Lines + _report.md 파싱)
-    GET /api/events?hours=24    윈도우 통계 (시간별·일자별·원인별 집계)
-    GET /api/live               최신 세션의 마지막 pose + 이벤트 스트림
-
-데이터 소스:
-    ~/wheelchair_ws/driving_data/[주행로그]_*.json (+ 같은 이름 *_report.md)
-"""
 from __future__ import annotations
 
 import argparse
@@ -37,7 +21,6 @@ import subprocess
 import uuid
 from pathlib import Path
 
-# ───────────────────────── Config ─────────────────────────
 
 DATA_DIR = Path(os.environ.get(
     "WHEELCHAIR_DATA_DIR",
@@ -63,7 +46,6 @@ ACTION_SEVERITY = {
 }
 DEDUP_WINDOW_SEC = 5.0
 
-# ───────────────────────── Helpers ─────────────────────────
 
 
 def list_session_files() -> list[Path]:
@@ -163,7 +145,6 @@ def extract_events(logs: list[dict]) -> list[dict]:
 def parse_confidence(md: str | None) -> int | None:
     if not md:
         return None
-    # Matches: "🎯 AI 신뢰도 | 75%" or "AI 신뢰도: 75"
     m = re.search(r"AI\s*신뢰도[\s:|🎯]*[\|\s]*(\d+)\s*%?", md)
     return int(m.group(1)) if m else None
 
@@ -187,7 +168,6 @@ def session_summary(path: Path, with_events: bool = False, with_raw: bool = Fals
             deep_md = None  
     mp = md_path_for(path)
     
-    # 2. R1 깊은 진단 보고서 경로 확인
     deep_mp = path.with_name(path.stem + "_r1_diagnosis.md")
     if with_events:
         print(f"\n--- [파일 읽기 시도] ---")
@@ -242,7 +222,6 @@ def session_summary(path: Path, with_events: bool = False, with_raw: bool = Fals
     return out
 
 
-# ───────────────────────── App ─────────────────────────
 
 app = FastAPI(title="Wheelchair Admin API", version="1.0.0")
 app.add_middleware(
@@ -354,7 +333,7 @@ def live():
     pose = last.get("pose") or {}
     zone_raw = last.get("zone") or ""
     last_ts = last.get("timestamp") or 0.0
-    connected = (time.time() - last_ts) < 30.0  # 30초 내 로그 → "연결됨"
+    connected = (time.time() - last_ts) < 30.0 
     return {
         "connected": connected,
         "session_id": s["id"],
@@ -391,31 +370,27 @@ def analyze_session():
     _analyzing = True
     """대시보드에서 명시적 세션 종료 및 AI 분석 트리거"""
     try:
-        # ROS 2 agent_analyzer 노드를 백그라운드로 실행
         cmd = "source /opt/ros/humble/setup.bash && source ~/wheelchair_ws/install/setup.bash && ros2 run wheelchair_robot_ai agent_analyzer"
         subprocess.Popen(["bash", "-c", cmd])
         return {"ok": True, "message": "세션 종료 및 AI 분석이 백그라운드에서 시작되었습니다."}
     except Exception as e:
         from fastapi import HTTPException
         raise HTTPException(500, f"분석 실행 실패: {str(e)}")
-# --- R1 깊은 진단 (Deep Analyze) 백그라운드 작업 ---
 
 WORKSPACE_DIR = Path("/home/kim/wheelchair_ws")
 DATA_DIR = WORKSPACE_DIR / "driving_data"
 
-# 진행 상태를 메모리에 저장 (간단한 구현)
 deep_jobs = {}
 
 def _run_deep_analyze(job_id: str, json_path: str):
     """백그라운드에서 analyze_log.py를 실행합니다."""
     try:
-        # 터미널에서 'python3 tools/analyze_log.py <파일>'을 치는 것과 동일한 동작
         result = subprocess.run(
             ["python3", "tools/analyze_log.py", json_path],
             cwd=str(WORKSPACE_DIR),
             capture_output=True,
             text=True,
-            timeout=600,  # 최대 10분 대기
+            timeout=600,  
         )
         deep_jobs[job_id] = {
             "status": "done",
@@ -431,7 +406,6 @@ def _run_deep_analyze(job_id: str, json_path: str):
 @app.post("/api/deep_analyze")
 async def start_deep_analyze(background_tasks: BackgroundTasks):
     """가장 최신 json 주행 로그를 찾아 분석을 시작합니다."""
-    # driving_data 폴더에서 json 파일을 시간 역순(최신순)으로 정렬
     json_files = sorted(DATA_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
     
     if not json_files:
@@ -454,17 +428,23 @@ async def get_deep_analyze_status(job_id: str):
 def trigger_analysis():
     """최신 주행 로그에 대해 AI 분석 스크립트를 실행합니다."""
     try:
-        # run_analyzer.sh 실행 (워크스페이스 내 경로 확인 필요)
         script_path = os.path.expanduser("~/wheelchair_ws/run_analyzer.sh")
-        # subprocess를 사용하여 쉘 스크립트 실행
         result = subprocess.run(["bash", script_path], capture_output=True, text=True, check=True)
         return {"ok": True, "message": "AI 분석이 성공적으로 완료되었습니다.", "output": result.stdout}
     except subprocess.CalledProcessError as e:
         raise HTTPException(500, detail=f"분석 스크립트 실행 실패: {e.stderr}")
     except Exception as e:
         raise HTTPException(500, detail=str(e))
-
-# ───────────────────────── Entrypoint ─────────────────────────
+@app.post("/api/remote_stop")
+def remote_stop():
+    try:
+        # ROS2 환경 변수 로드 후 수동 정지 토픽 발행
+        cmd = "source /opt/ros/humble/setup.bash && ros2 topic pub --once /sos_trigger std_msgs/String \"{data: 'manual_stop'}\""
+        subprocess.Popen(["bash", "-c", cmd])
+        return {"ok": True, "message": "정지 명령 전송 완료"}
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(500, f"명령 전송 실패: {str(e)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Wheelchair Admin Dashboard API")

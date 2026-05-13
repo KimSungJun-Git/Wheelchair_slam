@@ -230,7 +230,6 @@ function bucketEvents(events, hours) {
   };
 }
 
-// Public API ----------------------------------------------------------------
 
 const Api = {
   REASON_LABEL,

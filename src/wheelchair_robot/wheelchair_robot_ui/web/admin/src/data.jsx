@@ -57,7 +57,6 @@ const STATS = {
   ],
 };
 
-// Heatmap incident points relative to a SLAM map (0..100 grid)
 const HEAT_POINTS = [
   { x: 22, y: 34, level: "warning", label: "복도 B-3" },
   { x: 23, y: 35, level: "warning" },
@@ -114,7 +113,6 @@ const SAMPLE_MD = `# 사고 분석 보고서 — RPT-2026-2400
 > **정비 담당 메모**: WC-008은 지난주에도 동일 구간에서 유사 이벤트 1건.
 > 케이스 패턴 분석 권장.`;
 
-// Real-time event templates
 const EVENT_TEMPLATES = [
   { type: "nav_status", label: "경로 재계획 완료", level: "info" },
   { type: "zone_change", label: "일반구역 → 위험구역 진입", level: "warning" },

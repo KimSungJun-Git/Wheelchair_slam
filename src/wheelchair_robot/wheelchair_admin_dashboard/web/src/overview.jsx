@@ -123,7 +123,7 @@ function classifyReason(key) {
   return "other";
 }
 
-function OverviewPage() {
+function OverviewPage({ lang }) {
   const [data, setData] = useState(null);
   const [hours, setHours] = useState(24);
 
@@ -204,7 +204,7 @@ function OverviewPage() {
         <div className="card">
           <div className="card-head">
             <div>
-              <div className="card-title">일자별 이벤트</div>
+              <div className="card-title">{dict[lang].overview_daily_events || "일자별 이벤트"}</div>
               <div className="card-sub">위험(빨강) · 주의(주황) 스택</div>
             </div>
             <div className="seg">
@@ -233,7 +233,7 @@ function OverviewPage() {
         <div className="card">
           <div className="card-head">
             <div>
-              <div className="card-title">감지된 이상 원인</div>
+              <div className="card-title">{dict[lang].overview_detected_causes || "감지된 이상 원인"}</div>
               <div className="card-sub">reason 키 별 집계</div>
             </div>
           </div>
@@ -244,7 +244,7 @@ function OverviewPage() {
       <div className="card">
         <div className="card-head">
           <div>
-            <div className="card-title">사고 발생 위치 히트맵</div>
+            <div className="card-title">{dict[lang].overview_accident_locations || "사고 발생 위치 히트맵"}</div>
             <div className="card-sub">SLAM 좌표(pose.x / pose.y) — 점 크기는 빈도</div>
           </div>
           <div className="muted-meta">{data.events.filter((e) => e.pose && e.pose.x != null).length}개 좌표</div>

@@ -610,8 +610,7 @@ function AppInner() {
     default: screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} onEndSession={askEndSession} />;
   
   }
-  // 어디서든 정지 가능한 글로벌 정지 (진행 중 주행이 있을 때만 표시)
-  // 홈 화면에서는 SOS·보호자 pill과 충돌하므로 숨김
+
   const hasActiveNav = act.activities.some(a => a.status === 'active' && (a.label.startsWith('자율 주행') || a.label.includes('대기소 자동 귀환')));
   const showOverlays = currentScreen !== 'home' && currentScreen !== 'alert';
 

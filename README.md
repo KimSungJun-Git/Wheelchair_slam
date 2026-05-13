@@ -20,7 +20,7 @@ When any hazard fires, the wheelchair stops immediately, and the event type, rea
 
 ### Manual / autonomous switching · SOS
 The rider can switch out of autonomous mode and drive manually at any time, then switch back. An SOS button on the rider screen and a remote-stop button on the admin dashboard both cut autonomous driving instantly.
-
+그
 ### Rider screen
 A live SLAM map shows the wheelchair's pose, heading, and trail, plus five-directional obstacle distances. The screen auto-switches between driving / arrival / alert / SOS contexts. A side "system activity" panel tracks every action (connect, route, stop) as in-progress / done / failed, and the rider can cancel all active actions with one tap.
 

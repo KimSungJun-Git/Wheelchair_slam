@@ -21,14 +21,12 @@ class LogCollectorNode(Node):
         self.latest_velocity = {"linear": 0.0, "angular": 0.0}
         self.latest_zone = None
 
-        # ⭐️ 구독 정리 (중복 제거)
         self.create_subscription(Twist, '/cmd_vel', self.cmd_callback, 10)
         self.create_subscription(String, '/current_zone', self.zone_callback, 10)
         self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self.amcl_callback, 10)
         self.create_subscription(String, '/safety_action', self.log_callback, 10)
         self.create_subscription(String, '/sos_trigger', self.sos_callback, 10) 
         
-        # ⭐️ 핵심 추가: UI에서 요약 버튼을 눌렀을 때 로그 파일을 분리하기 위한 토픽
         self.create_subscription(String, '/request_log_rotation', self.rotation_callback, 10)
 
         self.last_snapshot_time = {}      
@@ -40,8 +38,8 @@ class LogCollectorNode(Node):
         
         self.get_logger().info(f"🟢 [스마트 블랙박스] 링 버퍼 활성화 대기 중...")
         
-        self.last_snapshot_time = {}      # 이벤트별 마지막 저장 시간
-        self.snapshot_cooldown_sec = 30.0 # 같은 이벤트는 30초 내 1회만 저장
+        self.last_snapshot_time = {}      
+        self.snapshot_cooldown_sec = 30.0
     def create_new_session(self):
         """새로운 로그 파일을 생성하고 타겟을 변경하는 함수"""
         session_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -54,10 +52,8 @@ class LogCollectorNode(Node):
         """웹 UI에서 요약 요청이 오면 기존 파일을 마감하고 새 파일을 엽니다."""
         self.get_logger().info("🔄 UI 요약 요청 수신: 현재 로그 마감 및 새 파일로 분리합니다.")
         
-        # 선택사항: 요약 버튼을 누른 순간의 직전 30초 상황도 강제로 기록하고 싶다면 활성화
         self.save_snapshot(seconds=30, event_name="summary_requested")
         
-        # 파일명을 새로 갱신 (이 시점 이후부터 이벤트가 터지면 새 파일에 저장됨)
         self.create_new_session()
         
     def amcl_callback(self, msg):
@@ -101,7 +97,6 @@ class LogCollectorNode(Node):
             data = json.loads(msg.data)
             current_time = time.time()
             data['timestamp'] = current_time
-            # data['location'] = {...}   ← 이 줄 삭제 (pose와 중복)
             data['pose'] = self.latest_pose.copy()
             data['velocity'] = self.latest_velocity.copy()
             data['zone'] = self.latest_zone
@@ -123,7 +118,6 @@ class LogCollectorNode(Node):
     def save_snapshot(self, seconds, event_name):
         now = time.time()
         
-        # 디바운싱 (콘솔 출력 스팸만 막음)
         last_time = self.last_snapshot_time.get(event_name, 0)
         if now - last_time < self.snapshot_cooldown_sec:
             return
@@ -135,7 +129,6 @@ class LogCollectorNode(Node):
         label_map = {"blocked": "비상정지", "modified": "명령수정", "sos": "SOS"}
         label = label_map.get(event_name, event_name)
         
-        # ⭐ 세션 파일에 append (구분 헤더 포함)
         with open(self.session_filepath, 'a', encoding='utf-8') as f:
             header = {
                 "_event_marker": True,
@@ -162,5 +155,5 @@ def main(args=None):
         node.get_logger().info("수집 종료.")
     finally:
         node.destroy_node()
-        if rclpy.ok():                 # ← 핵심: 이미 닫혔는지 체크
+        if rclpy.ok():                 
             rclpy.shutdown()

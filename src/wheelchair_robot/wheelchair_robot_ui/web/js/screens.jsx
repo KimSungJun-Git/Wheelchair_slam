@@ -55,7 +55,7 @@ function HomeScreen({ t, onSearch, onGoHome, onSOS, onEndSession }) {
     <Frame>
       <StatusBar />
       <div style={{ padding: '24px 28px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div><div style={{ fontSize: 18, color: TOKENS.color.inkMuted, fontWeight: 700 }}>{TXT.hello}, 김민지님</div><div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -0.5, marginTop: 6, color: TOKENS.color.primaryDark }}>{TXT.wheresToday}</div></div>
+        <div><div style={{ fontSize: 18, color: TOKENS.color.inkMuted, fontWeight: 700 }}>{TXT.hello}, Junho Sunwoo님</div><div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -0.5, marginTop: 6, color: TOKENS.color.primaryDark }}>{TXT.wheresToday}</div></div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <button onClick={toggleLanguage} style={{ padding: '8px 16px', borderRadius: 20, border: `2px solid ${TOKENS.color.line}`, background: '#fff', cursor: 'pointer', fontWeight: 800, color: TOKENS.color.primaryDark }}>
             {IS_ENG ? '🇺🇸 ENG' : '🇰🇷 KOR'}

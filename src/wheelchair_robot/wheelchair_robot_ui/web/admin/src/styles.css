@@ -570,7 +570,7 @@ input[type="range"] { width: 100%; accent-color: var(--brand); }
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: var(--sidebar-bg); /* 기존 관제 시스템 배경색 활용 */
+  background-color: var(--sidebar-bg); 
   font-family: "Pretendard", sans-serif;
 }
 
@@ -641,9 +641,7 @@ input[type="range"] { width: 100%; accent-color: var(--brand); }
 .login-btn:hover {
   background-color: var(--brand-2);
 }
-/* =========================================
-   보고서 탭 (기본 / 깊은 진단) 스타일
-========================================= */
+
 .report-tabs {
   display: flex;
   gap: 10px;

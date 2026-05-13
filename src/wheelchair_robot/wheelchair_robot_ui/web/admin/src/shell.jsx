@@ -1,4 +1,4 @@
-// Shell: sidebar + header + page router
+
 const { useState, useEffect } = React;
 
 const NAV = [
@@ -142,7 +142,6 @@ function fmtClock(d) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
-// --- 새로 추가: 실시간 팝업 컴포넌트 ---
 function ToastAlerts({ alerts, removeAlert }) {
   return (
     <div className="toast-container">
@@ -165,9 +164,7 @@ function ToastAlerts({ alerts, removeAlert }) {
   );
 }
 
-// --- 메인 App 컴포넌트 ---
 function App() {
-  // 1. 로그인 상태 관리 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     return sessionStorage.getItem('admin_logged_in') === 'true';
   });
@@ -176,12 +173,10 @@ function App() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // 2. 대시보드 상태 관리
   const [page, setPage] = useState("overview");
   const [mode, setMode] = useState("sample");
   const [health, setHealth] = useState(null);
 
-  // ⭐️ 3. 알림(Toast) 상태 관리 ⭐️
   const [alerts, setAlerts] = useState([]);
 
   // 알림을 추가하는 함수 (8초 뒤 자동 삭제)
@@ -195,18 +190,15 @@ function App() {
     }, 8000);
   };
 
-  // ⭐️ 4. ROS 2 토픽 구독 (SOS 및 비상정지 실시간 감지) ⭐️
   useEffect(() => {
     if (!isLoggedIn || !window.ros || !window.ROSLIB) return;
 
-    // SOS 버튼 감지
     const sosListener = new window.ROSLIB.Topic({
       ros: window.ros,
       name: '/sos_trigger',
       messageType: 'std_msgs/String'
     });
 
-    // 비상정지(에러) 감지
     const safetyListener = new window.ROSLIB.Topic({
       ros: window.ros,
       name: '/safety_action',
@@ -226,14 +218,12 @@ function App() {
       } catch(e) {}
     });
 
-    // 컴포넌트 종료 시 구독 해제
     return () => {
       sosListener.unsubscribe();
       safetyListener.unsubscribe();
     };
-  }, [isLoggedIn]); // 로그인 했을 때만 연결
+  }, [isLoggedIn]); 
 
-  // 로그인 처리 함수
   const handleLogin = (e) => {
     e.preventDefault();
     if (userId === 'smac' && password === '0000') {
@@ -252,7 +242,6 @@ function App() {
     setPassword('');
   };
 
-  // 기존 백엔드 API 헬스체크
   useEffect(() => {
     if (!isLoggedIn) return;
     let alive = true;
@@ -267,7 +256,6 @@ function App() {
   }, [isLoggedIn]);
 
 
-  // --- 로그인 화면 렌더링 ---
   if (!isLoggedIn) {
     return (
       <div className="login-container">
@@ -290,7 +278,6 @@ function App() {
     );
   }
 
-  // --- 대시보드 화면 렌더링 ---
   return (
     <div className="app" data-screen-label={`Mobicare · ${page}`}>
       

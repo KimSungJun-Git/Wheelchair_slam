@@ -68,7 +68,7 @@ function eventLabel(action) {
   return ({ sos: "SOS", blocked: "비상정지", modified: "명령수정", allowed: "정상" }[action] || action);
 }
 
-function LivePage() {
+function LivePage({ lang }) {
   const [snap, setSnap] = useS(null);
   const [history, setHistory] = useS([]);
   const [confirmStop, setConfirmStop] = useS(false);
@@ -117,7 +117,7 @@ function LivePage() {
         <div className="live-left card">
           <div className="card-head">
             <div>
-              <div className="card-title">실시간 위치</div>
+              <div className="card-title">{dict[lang].live_title || "실시간 위치"}</div>
               <div className="card-sub">SLAM 좌표 갱신 (2Hz 폴링)</div>
             </div>
             <div className="live-badges">
@@ -207,14 +207,18 @@ function LivePage() {
               <Icon name="OctagonAlert" size={18} /> 원격 정지 확인
             </div>
             <div className="modal-body">
-              <p>휠체어를 즉시 정지시킵니다. 사용자가 탑승 중이라면 충격이 발생할 수 있습니다.</p>
+              <p>The wheelchair stops immediately. If a user is seated in it, a sudden impact may occur. </p>
               <p className="mute small">조치: <span className="mono">/sos_trigger</span> 토픽으로 <span className="mono">"manual_stop"</span> 발행</p>
             </div>
             <div className="modal-foot">
               <button className="btn ghost" onClick={() => setConfirmStop(false)}>취소</button>
-              <button className="btn danger" onClick={() => { setConfirmStop(false); setStopped(true); }}>
-                <Icon name="Hand" size={14} /> 정지 실행
-              </button>
+              <button className="btn danger" onClick={() => { 
+                  setConfirmStop(false);
+                  setStopped(true);
+                  fetch('http://localhost:8090/api/remote_stop', { method: 'POST' }); 
+                }}>
+                  <Icon name="Hand" size={14} /> 정지 실행
+                </button>
             </div>
           </div>
         </div>

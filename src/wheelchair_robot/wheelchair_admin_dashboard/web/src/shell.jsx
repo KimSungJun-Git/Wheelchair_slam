@@ -87,7 +87,7 @@ function Sidebar({ page, setPage, mode, health }) {
   );
 }
 
-function Header({ page, mode, health }) {
+function Header({ page, mode, health, lang, setLang}) {
   const titles = {
     overview: { t: "개요", s: "주행 데이터 통계 — driving_data 기반" },
     reports: { t: "AI 사고 보고서", s: `Qwen 분석 — 세션 ${health?.session_count ?? 0}건` },
@@ -102,15 +102,15 @@ function Header({ page, mode, health }) {
   const handleManualAnalyze = async () => {
     if (!confirm("현재까지의 로그를 기반으로 AI 분석을 시작하시겠습니까?")) return;
     
-    // 로딩 상태 표시 등을 추가하면 더 좋습니다.
     const result = await window.Api.triggerAnalysis();
     if (result.ok) {
       alert("분석 완료! 보고서 목록을 확인하세요.");
-      location.reload(); // 결과 반영을 위한 새로고침
+      location.reload(); 
     } else {
       alert("에러: " + result.detail);
     }
   };
+
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -135,6 +135,14 @@ function Header({ page, mode, health }) {
           <Icon name="Clock" size={14} />
           <span>{fmtClock(now)}</span>
         </div>
+        <button 
+          className="btn" 
+          onClick={() => setLang(lang === 'ko' ? 'en' : 'ko')}
+          style={{ padding: "4px 8px", fontWeight: "bold", marginLeft: "8px" }}
+        >
+          {lang === 'ko' ? '🇺🇸 EN' : '🇰🇷 KR'}
+        </button>
+
         <button className="icon-btn" title="새로고침" onClick={() => location.reload()}>
           <Icon name="RefreshCw" size={16} />
         </button>
@@ -159,7 +167,7 @@ function App() {
   const [page, setPage] = useState("overview");
   const [mode, setMode] = useState("sample");
   const [health, setHealth] = useState(null);
-
+  const [lang, setLang] = useState("ko");
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -176,13 +184,13 @@ function App() {
 
   return (
     <div className="app" data-screen-label={`Mobicare · ${page}`}>
-      <Sidebar page={page} setPage={setPage} mode={mode} health={health} />
+      <Sidebar page={page} setPage={setPage} mode={mode} health={health} lang={lang} />
       <div className="main">
-        <Header page={page} mode={mode} health={health} />
+        <Header page={page} mode={mode} health={health} lang={lang} setLang={setLang} />
         <div className="content">
-          {page === "overview" && <OverviewPage />}
-          {page === "reports" && <ReportsPage />}
-          {page === "live" && <LivePage />}
+          {page === "overview" && <OverviewPage lang={lang} />}
+          {page === "reports" && <ReportsPage lang={lang} />}
+          {page === "live" && <LivePage lang={lang} />}
         </div>
       </div>
     </div>

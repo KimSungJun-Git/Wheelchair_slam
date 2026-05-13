@@ -19,7 +19,6 @@ class AgentState(TypedDict, total=False):
     summary: str
 
 
-# ===== 한국어 라벨 매핑 =====
 ACTION_LABEL: dict[str, str] = {
     "blocked":  "🚨 비상정지",
     "modified": "⚠️ 명령수정",
@@ -38,8 +37,7 @@ REASON_LABEL: dict[str, str] = {
     "obstacle_front":         "전방 장애물",
 }
 
-DEDUP_WINDOW_SEC = 5.0  # 같은 사건이 N초 이내 반복되면 1건으로 묶음
-
+DEDUP_WINDOW_SEC = 5.0  
 
 def split_reasons(reason_str):
     """콤마로 합쳐진 reason을 분리. 'key:상세값' 형태면 key만 추출."""
@@ -51,7 +49,7 @@ def split_reasons(reason_str):
         r = r.strip()
         if not r:
             continue
-        # 'imu_기울기:roll=-50.8° pitch=22.4°' → 'imu_기울기'
+
         key = r.split(":")[0].strip()
         if key:
             normalized.append(key)
@@ -196,7 +194,6 @@ def read_logs(state: AgentState):
         print("\033[92m🟢 [완벽] 수집된 로그가 없습니다.\033[0m")
         sys.exit(0)
     
-    # ⭐ 핵심: log_collector가 중복 저장한 메시지를 먼저 제거
     before_count = len(raw_logs_list)
     all_logs = deduplicate_messages(raw_logs_list)
     after_count = len(all_logs)
@@ -235,8 +232,8 @@ Rules:
 - Express findings as possibilities, not assertions.
 - Every finding must reference evidence from the stats.
 - If a metric is missing or zero, set "insufficient_data": true.
-- Preserve Korean destination labels (응급실/101호/102호/대기소) verbatim.
-- All string values MUST be written in Korean only. NEVER use Chinese characters.
+- Preserve Korean destination labels (e.g., 응급실/101호/102호/대기소) verbatim.
+- All analysis, summaries, and reasons MUST be written entirely in English. NEVER use Korean except for the destination labels.
 
 [STATS]
 {stats}

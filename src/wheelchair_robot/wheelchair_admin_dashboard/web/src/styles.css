@@ -564,3 +564,21 @@ input[type="range"] { width: 100%; accent-color: var(--brand); }
   .nav-text, .brand-title, .brand-sub, .fleet-card, .logout span { display: none; }
   .rep-grid, .live-grid { grid-template-columns: 1fr; }
 }
+@media print {
+  .sidebar, .topbar, .rep-left, .detail-head, .detail-actions, .detail-confidence, .banner, .report-tabs {
+    display: none !important;
+  }
+  .app, .main, .content, .rep-grid, .rep-right, .detail {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .md-body {
+    font-size: 12pt;
+    color: #000;
+  }
+}

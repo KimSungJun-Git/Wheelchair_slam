@@ -1,4 +1,3 @@
-// ─── 2.5 시스템 활동 로그 (Activity Log) ──────────────────────────
 const ActivityContext = React.createContext(null);
 
 function ActivityProvider({ children }) {
@@ -125,7 +124,6 @@ function ActivityRow({ entry, onCancel, now }) {
   );
 }
 
-// ─── 2.6 확인 다이얼로그 ──────────────────────────────────────────
 function ConfirmDialog({ open, title, message, confirmText = '확인', cancelText = '취소', tone = 'primary', onConfirm, onCancel }) {
   if (!open) return null;
   const C = TOKENS.color;
@@ -210,7 +208,6 @@ function ActivityPanel({ onStop }) {
     </button>
   );
 
-  // 미니마이즈 모드: 화면 하단 좌측 한 줄, 우측에 노출되는 정지·홈·기타 버튼 가리지 않도록 좌측 정렬
   if (!open) {
     return (
       <div style={{
