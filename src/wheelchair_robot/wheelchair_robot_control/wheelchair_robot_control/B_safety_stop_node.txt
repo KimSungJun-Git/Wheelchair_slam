@@ -16,7 +16,6 @@ class SafetyStopNode(Node):
     def __init__(self):
         super().__init__('safety_stop_node')
         self.create_subscription(Twist, '/cmd_vel_nav', self.nav_cmd_callback, 10)
-        self.create_subscription(Twist, '/cmd_vel_lane', self.lane_cmd_callback, 10)
         # 초음파 (RELIABLE QoS, 일반 publisher와 매칭)
         self.create_subscription(Range, '/ultrasonic/range', self.front_callback, 10)
         self.create_subscription(Range, '/ultrasonic/left', self.left_callback, 10)
@@ -29,10 +28,7 @@ class SafetyStopNode(Node):
         self.create_subscription(Bool, '/emergency_stop/imu', self.imu_emergency_cb, 10)
         self.create_subscription(Bool, '/emergency_stop/localization', self.localization_emergency_cb, 10)
 
-        #self.cmd_pub = self.create_publisher(Twist, '/cmd_vel_safe', 10)
-        self.nav_cmd_pub = self.create_publisher(Twist, '/cmd_vel_safe', 10)
-        self.lane_cmd_pub = self.create_publisher(Twist, '/cmd_vel_lane_safe', 10)
-        
+        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel_safe', 10)
         self.zone_pub = self.create_publisher(String, '/current_zone', 10)
         self.avoid_pub = self.create_publisher(String, '/avoidance_direction', 10)
         self.alert_pub = self.create_publisher(String, '/safety_alert', 10)
@@ -93,9 +89,8 @@ class SafetyStopNode(Node):
 
         self.get_logger().info(
             f'Safety Stop Node 시작 | 전방 정지: {self.danger_distance_m*100:.0f}cm | '
-            #f'헬스체크 활성화 (라이다/IMU/초음파/모터)')
-            f'헬스체크 활성화 (라이다/IMU/초음파/모터) | '
-            f'입력: /cmd_vel_nav, /cmd_vel_lane')
+            f'헬스체크 활성화 (라이다/IMU/초음파/모터)')
+
     #  센서 위험 상태 갱신
     def imu_emergency_cb(self, msg: Bool):
         self.set_reason('imu_emergency', msg.data)
@@ -186,23 +181,17 @@ class SafetyStopNode(Node):
 
     #  Cmd Vel 게이트웨이
     def nav_cmd_callback(self, msg: Twist):
-        #self.process_and_publish(msg, "Navigation")
-        self.process_and_publish(msg, "Navigation", self.nav_cmd_pub)
-    #def process_and_publish(self, msg, source):
-    #    """모든 cmd_vel이 거쳐가는 단일 안전 게이트웨이"""
-    def lane_cmd_callback(self, msg: Twist):
-        self.process_and_publish(msg, "Lane", self.lane_cmd_pub)
+        self.process_and_publish(msg, "Navigation")
 
-    def process_and_publish(self, msg, source, publisher):
-        """Nav2/Lane cmd_vel을 공통 안전 필터로 검사한 뒤 지정된 토픽으로 출력"""
+    def process_and_publish(self, msg, source):
+        """모든 cmd_vel이 거쳐가는 단일 안전 게이트웨이"""
 
         # 1) 비상 정지
         if self.is_emergency:
-            #self.cmd_pub.publish(Twist())
-            publisher.publish(Twist())
+            self.cmd_pub.publish(Twist())
             self.publish_action(source, 'blocked', ','.join(self.dangerous_sensors))
             return
-        
+
         # 2) 초음파 전방 장애물
         safe_msg = Twist()
         safe_msg.linear = msg.linear
@@ -210,14 +199,12 @@ class SafetyStopNode(Node):
 
         if msg.linear.x > 0.0 and self.dist_front <= self.danger_distance_m:
             safe_msg.linear.x = 0.0
-            #self.cmd_pub.publish(safe_msg)
-            publisher.publish(safe_msg)
+            self.cmd_pub.publish(safe_msg)
             self.publish_action(source, 'modified', 'obstacle_front')
             return
 
         # 3) 정상 통과
-        #self.cmd_pub.publish(safe_msg)
-        publisher.publish(safe_msg)
+        self.cmd_pub.publish(safe_msg)
         self.publish_action(source, 'allowed', '')
 
     def publish_action(self, source, action, reason):
