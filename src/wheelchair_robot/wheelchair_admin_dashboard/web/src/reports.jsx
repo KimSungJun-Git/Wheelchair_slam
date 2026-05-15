@@ -91,7 +91,11 @@ function ReportsPage({lang}) {
   useEffectR(() => {
     window.Api.getReports().then((d) => {
       setList(d.reports || []);
-      if (d.reports?.[0]) setSelectedId(d.reports[0].id);
+      const firstWithMd = d.reports?.find(r => r.has_md);
+      const fallback = d.reports?.[0];
+      if (firstWithMd || fallback) {
+        setSelectedId((firstWithMd || fallback).id);
+      }
     });
   }, []);
 

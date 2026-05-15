@@ -166,14 +166,14 @@ def session_summary(path: Path, with_events: bool = False, with_raw: bool = Fals
             deep_md = deep_mp.read_text(encoding="utf-8")
         except OSError:
             deep_md = None  
-    mp = md_path_for(path)
-    
-    deep_mp = path.with_name(path.stem + "_r1_diagnosis.md")
-    if with_events:
-        print(f"\n--- [파일 읽기 시도] ---")
-        print(f"기본 파일: {mp} (존재: {mp.exists()})")
-        print(f"깊은 진단: {deep_mp} (존재: {deep_mp.exists()})")
-        print(f"----------------------\n")
+    #mp = md_path_for(path)
+
+    #deep_mp = path.with_name(path.stem + "_r1_diagnosis.md")
+    #if with_events:
+    #    print(f"\n--- [파일 읽기 시도] ---")
+    #    print(f"기본 파일: {mp} (존재: {mp.exists()})")
+    #    print(f"깊은 진단: {deep_mp} (존재: {deep_mp.exists()})")
+    #    print(f"----------------------\n")
     if not logs:
         return {
             "id": session_id(path),
@@ -458,3 +458,22 @@ if __name__ == "__main__":
     print(f"📁 data_dir = {DATA_DIR} ({'OK' if DATA_DIR.exists() else '없음'})")
     print(f"🔌 http://{args.host}:{args.port}/api/health")
     uvicorn.run("server:app" if args.reload else app, host=args.host, port=args.port, reload=args.reload)
+
+
+def main(args=None):
+    global DATA_DIR
+    parser = argparse.ArgumentParser(description="Wheelchair Admin Dashboard API")
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=PORT)
+    parser.add_argument("--data-dir", default=str(DATA_DIR))
+    parser.add_argument("--reload", action="store_true")
+    parsed, _ = parser.parse_known_args(args)
+
+    DATA_DIR = Path(os.path.expanduser(parsed.data_dir))
+    print(f"📁 data_dir = {DATA_DIR} ({'OK' if DATA_DIR.exists() else '없음'})")
+    print(f"🔌 http://{parsed.host}:{parsed.port}/api/health")
+    uvicorn.run(app, host=parsed.host, port=parsed.port, reload=parsed.reload)
+
+
+if __name__ == "__main__":
+    main()
