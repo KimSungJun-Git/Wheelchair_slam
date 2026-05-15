@@ -37,11 +37,13 @@ def generate_launch_description():
             name='wheelchair_ui_server',
         ),
 
-        ExecuteProcess(
-            cmd=['bash', '-c', 'cd ~/wheelchair_ws/src/wheelchair_robot/wheelchair_admin_dashboard && python3 server.py'],
-            output='screen',
+        Node(
+            package='wheelchair_admin_dashboard',
+            executable='server',
             name='admin_backend_server',
+            output='screen'
         ),
+
         Node(
             package='wheelchair_robot_ai',
             executable='log_collector_node',   
