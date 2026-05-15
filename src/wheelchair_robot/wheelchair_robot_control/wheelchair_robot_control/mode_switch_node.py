@@ -367,6 +367,8 @@ class ModeSwitchNode(Node):
         cmd = msg.data.strip().lower()
         if cmd == 'm':
             self.switch_mode()
+        elif cmd == 'a':              
+            self.set_mode('auto')
         elif cmd == 'home':
             self._send_home_goal()
         elif cmd == 'l':
@@ -427,6 +429,8 @@ class ModeSwitchNode(Node):
             self.cancel_nav()
             self.mode = 'lane'
             self.get_logger().info('>>> 차선 주행 모드로 전환')
+            self.publish_mode()
+
 
     def switch_mode(self):
         if self.mode == 'manual':

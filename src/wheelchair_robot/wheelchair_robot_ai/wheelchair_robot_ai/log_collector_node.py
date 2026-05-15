@@ -13,6 +13,7 @@ from collections import deque, Counter
 
 class LogCollectorNode(Node):
     def __init__(self):
+        super().__init__('log_collector_node')
         self.log_buffer = deque(maxlen=1000) 
         self.save_dir = os.path.expanduser('~/wheelchair_ws/driving_data')
         os.makedirs(self.save_dir, exist_ok=True)
@@ -41,19 +42,27 @@ class LogCollectorNode(Node):
         self.last_snapshot_time = {}      
         self.snapshot_cooldown_sec = 30.0
     def create_new_session(self):
-        """새로운 로그 파일을 생성하고 타겟을 변경하는 함수"""
         session_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.session_filename = f"[주행로그]_{session_time}.json"
         self.session_filepath = os.path.join(self.save_dir, self.session_filename)
         self.session_event_counter = Counter()
+
+        # 세션 시작 마커를 즉시 디스크에 기록 → 파일이 항상 존재 보장
+        with open(self.session_filepath, 'w', encoding='utf-8') as f:
+            marker = {
+                "_session_marker": True,
+                "event_type": "session_start",
+                "timestamp": time.time(),
+                "session_name": self.session_filename,
+            }
+            f.write(json.dumps(marker, ensure_ascii=False) + '\n')
+
         self.get_logger().info(f"🟢 새 세션 시작 → {self.session_filename}")
         
     def rotation_callback(self, msg):
-        """웹 UI에서 요약 요청이 오면 기존 파일을 마감하고 새 파일을 엽니다."""
-        self.get_logger().info("🔄 UI 요약 요청 수신: 현재 로그 마감 및 새 파일로 분리합니다.")
-        
-        self.save_snapshot(seconds=30, event_name="summary_requested")
-        
+        self.get_logger().info("🔄 UI 요약 요청 수신")
+        # event_name을 매번 unique하게 → 쿨다운 우회
+        self.save_snapshot(seconds=30, event_name=f"summary_{int(time.time())}")
         self.create_new_session()
         
     def amcl_callback(self, msg):

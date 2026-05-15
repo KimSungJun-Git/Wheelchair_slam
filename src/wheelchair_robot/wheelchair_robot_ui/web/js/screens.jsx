@@ -142,7 +142,7 @@ function SearchScreen({ t, onBack, onGoHome, onStartRoute }) {
   );
 }
 
-function NavScreen({ t, mode, distances, robotWorld, mapConfig, onBack, onGoHome, onStop, onManual, onAuto }) {
+function NavScreen({ t, mode, distances, robotWorld, mapConfig, onBack, onGoHome, onStop, onManual, onAuto, onLane }) {
   return (
     <Frame bg={TOKENS.color.mapFloor}>
       <div style={{ position: 'absolute', inset: 0, background: TOKENS.color.mapBg }}>
@@ -158,6 +158,12 @@ function NavScreen({ t, mode, distances, robotWorld, mapConfig, onBack, onGoHome
           <div style={{ display: 'flex', background: TOKENS.color.surfaceAlt, borderRadius: 999, padding: 4 }}>
             <button onClick={onManual} style={{ padding: '18px 28px', border: 'none', borderRadius: 999, background: mode === 'manual' ? TOKENS.color.primary : 'transparent', color: mode === 'manual' ? '#fff' : TOKENS.color.primaryDark, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>{TXT.manual}</button>
             <button onClick={onAuto} style={{ padding: '18px 28px', border: 'none', borderRadius: 999, background: mode === 'auto' ? TOKENS.color.primary : 'transparent', color: mode === 'auto' ? '#fff' : TOKENS.color.primaryDark, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>{TXT.auto}</button>
+            <button onClick={onLane} style={{
+              padding: '18px 24px', border: 'none', borderRadius: 999,
+              background: mode === 'lane' ? TOKENS.color.primary : 'transparent',
+              color: mode === 'lane' ? '#fff' : TOKENS.color.primaryDark,
+              fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit'
+            }}>{IS_ENG ? 'Lane' : '차선'}</button>
           </div>
           <button onClick={onStop} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 32px', background: TOKENS.color.danger, color: '#fff', border: 'none', borderRadius: 999, fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(229,72,77,0.3)' }}><Icon name="stop" size={22} stroke={2.5} /> {TXT.stop}</button>
         </div>
@@ -173,6 +179,7 @@ const getAlertInfo = (reason) => {
     keepout_violation: { title: IS_ENG ? '🚫 Keepout Zone' : '🚫 금지구역 진입', subtitle: IS_ENG ? 'Cannot enter this area. Please select another route.' : '진입할 수 없는 구역입니다. 다른 경로를 선택하세요.', tone: 'danger' },
     imu_emergency: { title: IS_ENG ? '🚨 Wheelchair Tilt Warning' : '🚨 휠체어 자세 위험', subtitle: IS_ENG ? 'Stopped due to tilt or impact detection.' : '기울기 또는 충격이 감지되어 정지했습니다. 휠체어 상태를 확인하세요.', tone: 'danger' },
     localization_lost: { title: IS_ENG ? '📍 Localization Lost' : '📍 위치 추적 분실', subtitle: IS_ENG ? 'Cannot find current position. System is retrying.' : '현재 위치를 찾을 수 없습니다. 시스템이 재인식을 시도 중입니다.', tone: 'danger' },
+    lane_lost: {title:    IS_ENG ? '🛣️ Lane Lost' : '🛣️ 차선 인식 끊김',subtitle: IS_ENG ? 'Cannot detect the lane. Switched to manual mode.': '차선이 보이지 않아 수동 모드로 전환했습니다.',tone: 'warn'},
     user_stop: { title: IS_ENG ? '🛑 User Stopped' : '🛑 사용자 정지', subtitle: IS_ENG ? 'Driving stopped. Please select next action.' : '주행이 정지되었습니다. 다음 동작을 선택하세요.', tone: 'warn' },
     sos: { title: IS_ENG ? '🆘 SOS Triggered' : '🆘 SOS 호출됨', subtitle: IS_ENG ? 'Alerts sent to caregivers and control room.' : '보호자와 관제실에 알림이 전달되었습니다.', tone: 'danger' },
     default: { title: IS_ENG ? 'Driving Paused' : '주행 일시 중단', subtitle: IS_ENG ? 'Please select next action.' : '다음 동작을 선택하세요.', tone: 'warn' },
