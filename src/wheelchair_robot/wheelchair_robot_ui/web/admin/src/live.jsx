@@ -1,10 +1,10 @@
 const { useState: useS, useEffect: useE, useRef: useR, useMemo: useM } = React;
 
-function LiveMap({ pose, history }) {
+function LiveMap({ pose, history, lang = "ko" }) {
   const W = 900, H = 540;
   const all = [...history, pose].filter((p) => p && p.x != null);
   if (!all.length) {
-    return <div className="live-map empty"><div className="empty-msg">위치 데이터 대기 중…</div></div>;
+    return <div className="live-map empty"><div className="empty-msg">{window.dict[lang].lv_wait}</div></div>;
   }
   const xs = all.map((p) => p.x);
   const ys = all.map((p) => p.y);
@@ -64,11 +64,11 @@ function eventTone(action) {
   return "info";
 }
 
-function eventLabel(action) {
-  return ({ sos: "SOS", blocked: "비상정지", modified: "명령수정", allowed: "정상" }[action] || action);
+function eventLabel(action, lang = "ko") {
+  return ({ sos: "SOS", blocked: window.dict[lang].reports_kpi_estop, modified: window.dict[lang].reports_kpi_cmd, allowed: window.dict[lang].reports_level_normal }[action] || action);
 }
 
-function LivePage() {
+function LivePage({ lang = "ko" }) {
   const [snap, setSnap] = useS(null);
   const [history, setHistory] = useS([]);
   const [confirmStop, setConfirmStop] = useS(false);
@@ -78,13 +78,14 @@ function LivePage() {
   const [analyzing, setAnalyzing] = useS(false);
 
   const handleEndSession = async () => {
-    if (confirm("현재 주행 세션을 마감하고 지금까지의 로그로 AI 진단을 시작하시겠습니까?")) {
+    if (confirm(window.dict[lang].lv_end_confirm)) {
       setAnalyzing(true);
       try {
-        await window.Api.endSession();
-        alert("AI 분석이 시작되었습니다! 약 1~2분 뒤 '보고서' 탭에서 결과를 확인하세요.");
+        const res = await fetch(`http://${window.location.hostname}:8090/api/analyze_session`, { method: 'POST' });
+        if (!res.ok) throw new Error("API error");
+        alert(window.dict[lang].lv_end_success);
       } catch (e) {
-        alert("분석 요청 중 문제가 발생했습니다. 서버가 켜져 있는지 확인해주세요.");
+        alert(window.dict[lang].lv_end_fail);
       }
       setAnalyzing(false);
     }
@@ -120,7 +121,7 @@ function LivePage() {
     });
   }, [events]);
 
-  if (!snap) return <div className="loading">실시간 데이터 연결 중…</div>;
+  if (!snap) return <div className="loading">{window.dict[lang].lv_loading}</div>;
 
   const zone = snap.zone || "—";
   const zoneTone = zone.includes("위험") ? "critical" : zone.includes("비상") ? "critical" : "ok";
@@ -132,30 +133,30 @@ function LivePage() {
         <div className="live-left card">
           <div className="card-head">
             <div>
-              <div className="card-title">실시간 위치</div>
-              <div className="card-sub">SLAM 좌표 갱신 (2Hz 폴링)</div>
+              <div className="card-title">{window.dict[lang].lv_loc_title}</div>
+              <div className="card-sub">{window.dict[lang].lv_loc_sub}</div>
             </div>
             <div className="live-badges">
               <div className={`badge ${mode === "auto" ? "ok" : "warn"}`}>
                 <Icon name={mode === "auto" ? "Cpu" : "Hand"} size={12} />
-                {mode === "auto" ? "자율주행" : "수동"}
+                {mode === "auto" ? window.dict[lang].ov_auto : window.dict[lang].ov_manual}
               </div>
               <div className={`badge ${zoneTone}`}>
                 <Icon name="Map" size={12} /> {zone}
               </div>
               <div className={`badge ${snap.connected ? "ok" : "danger"}`}>
                 <span className={`pulse-dot ${snap.connected ? "ok" : "danger"}`} />
-                {snap.connected ? "연결됨" : "끊김"}
+                {snap.connected ? window.dict[lang].lv_conn : window.dict[lang].lv_disconn}
               </div>
             </div>
           </div>
-          <LiveMap pose={snap.pose} history={history} />
+          <LiveMap pose={snap.pose} history={history} lang={lang} />
           <div className="live-readouts">
             <div className="ro"><div className="ro-l">x</div><div className="ro-v mono">{fmtNum(snap.pose?.x)}</div></div>
             <div className="ro"><div className="ro-l">y</div><div className="ro-v mono">{fmtNum(snap.pose?.y)}</div></div>
             <div className="ro"><div className="ro-l">yaw</div><div className="ro-v mono">{fmtNum(snap.pose?.yaw)} rad</div></div>
-            <div className="ro"><div className="ro-l">선속도</div><div className="ro-v mono">{fmtNum(snap.velocity?.linear)} m/s</div></div>
-            <div className="ro"><div className="ro-l">각속도</div><div className="ro-v mono">{fmtNum(snap.velocity?.angular)} rad/s</div></div>
+            <div className="ro"><div className="ro-l">{window.dict[lang].lv_linear_vel}</div><div className="ro-v mono">{fmtNum(snap.velocity?.linear)} m/s</div></div>
+            <div className="ro"><div className="ro-l">{window.dict[lang].lv_angular_vel}</div><div className="ro-v mono">{fmtNum(snap.velocity?.angular)} rad/s</div></div>
           </div>
         </div>
 
@@ -164,22 +165,22 @@ function LivePage() {
           <div className="card stream-card">
             <div className="card-head">
               <div>
-                <div className="card-title">이벤트 스트림</div>
-                <div className="card-sub">최근 30건 · 신규는 위로 슬라이드</div>
+                <div className="card-title">{window.dict[lang].lv_stream_title}</div>
+                <div className="card-sub">{window.dict[lang].lv_stream_sub}</div>
               </div>
-              <div className="muted-meta">{events.length}건</div>
+              <div className="muted-meta">{events.length}{window.dict[lang].lv_count}</div>
             </div>
             <div className="stream">
-              {tagged.length === 0 && <div className="empty-msg pad">대기 중…</div>}
+              {tagged.length === 0 && <div className="empty-msg pad">{window.dict[lang].lv_standby}</div>}
               {tagged.map((e) => (
                 <div key={e._key} className={`stream-item ${e._new ? "fresh" : ""}`}>
                   <span className={`stream-dot ${eventTone(e.action)}`} />
                   <div className="stream-body">
                     <div className="stream-row">
-                      <span className={`stream-tag ${eventTone(e.action)}`}>{eventLabel(e.action)}</span>
+                      <span className={`stream-tag ${eventTone(e.action)}`}>{eventLabel(e.action, lang)}</span>
                       <span className="stream-time">{fmtTime(e.ts)}</span>
                     </div>
-                    <div className="stream-msg">{e.reason_label || "—"}</div>
+                    <div className="stream-msg">{e.reason_key ? (window.dict[lang][`reason_${e.reason_key}`] || e.reason_label) : (e.reason_label || "—")}</div>
                     {e.pose && e.pose.x != null && (
                       <div className="stream-meta mono">
                         x={fmtNum(e.pose.x)} y={fmtNum(e.pose.y)}{e.zone ? ` · ${e.zone}` : ""}
@@ -199,10 +200,10 @@ function LivePage() {
               onClick={handleEndSession}
               disabled={analyzing}
             >
-              {analyzing ? "분석 요청 중..." : "일과 마감 및 AI 분석 시작"}
+              {analyzing ? window.dict[lang].lv_end_req : window.dict[lang].lv_end_btn}
             </button>
             <div className="muted-meta" style={{ textAlign: 'center', fontSize: '12px' }}>
-              지금까지의 주행 로그를 바탕으로 리포트를 생성합니다.
+              {window.dict[lang].lv_end_desc}
             </div>
           </div>
 
@@ -214,18 +215,26 @@ function LivePage() {
                   <Icon name="Hand" size={28} strokeWidth={2.5} />
                 </div>
                 <div className="stop-text">
-                  <div className="stop-title">원격 정지</div>
-                  <div className="stop-sub">현재 주행 즉시 중단 · /sos_trigger 발행</div>
+                  <div className="stop-title">{window.dict[lang].lv_stop_title}</div>
+                  <div className="stop-sub">{window.dict[lang].lv_stop_sub}</div>
                 </div>
               </button>
             ) : (
               <div className="stop-active">
                 <Icon name="OctagonAlert" size={22} />
                 <div>
-                  <div className="stop-title">정지 명령 전송됨</div>
-                  <div className="stop-sub">관제실 확인 대기 중…</div>
+                  <div className="stop-title">{window.dict[lang].lv_stop_sent}</div>
+                  <div className="stop-sub">{window.dict[lang].lv_stop_wait}</div>
                 </div>
-                <button className="btn ghost sm" onClick={() => setStopped(false)}>해제</button>
+                <button className="btn ghost sm" onClick={() => {
+                  setStopped(false);
+                  if (window.ros && window.ROSLIB) {
+                    const modePub = new window.ROSLIB.Topic({
+                      ros: window.ros, name: '/mode_switch', messageType: 'std_msgs/String'
+                    });
+                    modePub.publish(new window.ROSLIB.Message({ data: 'a' }));
+                  }
+                }}>{window.dict[lang].lv_release}</button>
               </div>
             )}
           </div>
@@ -237,16 +246,25 @@ function LivePage() {
         <div className="modal-back" onClick={() => setConfirmStop(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head danger">
-              <Icon name="OctagonAlert" size={18} /> 원격 정지 확인
+              <Icon name="OctagonAlert" size={18} /> {window.dict[lang].lv_stop_confirm}
             </div>
             <div className="modal-body">
-              <p>휠체어를 즉시 정지시킵니다. 사용자가 탑승 중이라면 충격이 발생할 수 있습니다.</p>
-              <p className="mute small">조치: <span className="mono">/sos_trigger</span> 토픽으로 <span className="mono">"manual_stop"</span> 발행</p>
+              <p>{window.dict[lang].lv_stop_msg1}</p>
+              <p className="mute small">{window.dict[lang].lv_stop_msg2}</p>
             </div>
             <div className="modal-foot">
-              <button className="btn ghost" onClick={() => setConfirmStop(false)}>취소</button>
-              <button className="btn danger" onClick={() => { setConfirmStop(false); setStopped(true); }}>
-                <Icon name="Hand" size={14} /> 정지 실행
+              <button className="btn ghost" onClick={() => setConfirmStop(false)}>{window.dict[lang].lv_cancel}</button>
+              <button className="btn danger" onClick={() => { 
+                setConfirmStop(false); 
+                setStopped(true); 
+                if (window.ros && window.ROSLIB) {
+                  const sosPub = new window.ROSLIB.Topic({
+                    ros: window.ros, name: '/sos_trigger', messageType: 'std_msgs/String'
+                  });
+                  sosPub.publish(new window.ROSLIB.Message({ data: 'manual_stop' }));
+                }
+              }}>
+                <Icon name="Hand" size={14} /> {window.dict[lang].lv_execute}
               </button>
             </div>
           </div>

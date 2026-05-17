@@ -1,10 +1,10 @@
 const { useState: useS, useEffect: useE, useRef: useR, useMemo: useM } = React;
 
-function LiveMap({ pose, history }) {
+function LiveMap({ pose, history, lang }) {
   const W = 900, H = 540;
   const all = [...history, pose].filter((p) => p && p.x != null);
   if (!all.length) {
-    return <div className="live-map empty"><div className="empty-msg">위치 데이터 대기 중…</div></div>;
+    return <div className="live-map empty"><div className="empty-msg">{dict[lang].live_pose_waiting}</div></div>;
   }
   const xs = all.map((p) => p.x);
   const ys = all.map((p) => p.y);
@@ -64,8 +64,14 @@ function eventTone(action) {
   return "info";
 }
 
-function eventLabel(action) {
-  return ({ sos: "SOS", blocked: "비상정지", modified: "명령수정", allowed: "정상" }[action] || action);
+function eventLabel(action, lang) {
+  const map = {
+    sos: dict[lang].live_tag_sos,
+    blocked: dict[lang].live_tag_blocked,
+    modified: dict[lang].live_tag_modified,
+    allowed: dict[lang].live_tag_allowed,
+  };
+  return map[action] || action;
 }
 
 function LivePage({ lang }) {
@@ -105,7 +111,7 @@ function LivePage({ lang }) {
     });
   }, [events]);
 
-  if (!snap) return <div className="loading">실시간 데이터 연결 중…</div>;
+  if (!snap) return <div className="loading">{dict[lang].live_loading}</div>;
 
   const zone = snap.zone || "—";
   const zoneTone = zone.includes("위험") ? "critical" : zone.includes("비상") ? "critical" : "ok";
@@ -117,30 +123,30 @@ function LivePage({ lang }) {
         <div className="live-left card">
           <div className="card-head">
             <div>
-              <div className="card-title">{dict[lang].live_title || "실시간 위치"}</div>
-              <div className="card-sub">SLAM 좌표 갱신 (2Hz 폴링)</div>
+              <div className="card-title">{dict[lang].live_title}</div>
+              <div className="card-sub">{dict[lang].live_sub}</div>
             </div>
             <div className="live-badges">
               <div className={`badge ${mode === "auto" ? "ok" : "warn"}`}>
                 <Icon name={mode === "auto" ? "Cpu" : "Hand"} size={12} />
-                {mode === "auto" ? "자율주행" : "수동"}
+                {mode === "auto" ? dict[lang].live_mode_auto : dict[lang].live_mode_manual}
               </div>
               <div className={`badge ${zoneTone}`}>
                 <Icon name="Map" size={12} /> {zone}
               </div>
               <div className={`badge ${snap.connected ? "ok" : "danger"}`}>
                 <span className={`pulse-dot ${snap.connected ? "ok" : "danger"}`} />
-                {snap.connected ? "연결됨" : "끊김"}
+                {snap.connected ? dict[lang].live_connected : dict[lang].live_disconnected}
               </div>
             </div>
           </div>
-          <LiveMap pose={snap.pose} history={history} />
+          <LiveMap pose={snap.pose} history={history} lang={lang} />
           <div className="live-readouts">
             <div className="ro"><div className="ro-l">x</div><div className="ro-v mono">{fmtNum(snap.pose?.x)}</div></div>
             <div className="ro"><div className="ro-l">y</div><div className="ro-v mono">{fmtNum(snap.pose?.y)}</div></div>
             <div className="ro"><div className="ro-l">yaw</div><div className="ro-v mono">{fmtNum(snap.pose?.yaw)} rad</div></div>
-            <div className="ro"><div className="ro-l">선속도</div><div className="ro-v mono">{fmtNum(snap.velocity?.linear)} m/s</div></div>
-            <div className="ro"><div className="ro-l">각속도</div><div className="ro-v mono">{fmtNum(snap.velocity?.angular)} rad/s</div></div>
+            <div className="ro"><div className="ro-l">{dict[lang].live_vel_linear}</div><div className="ro-v mono">{fmtNum(snap.velocity?.linear)} m/s</div></div>
+            <div className="ro"><div className="ro-l">{dict[lang].live_vel_angular}</div><div className="ro-v mono">{fmtNum(snap.velocity?.angular)} rad/s</div></div>
           </div>
         </div>
 
@@ -148,19 +154,19 @@ function LivePage({ lang }) {
           <div className="card stream-card">
             <div className="card-head">
               <div>
-                <div className="card-title">이벤트 스트림</div>
-                <div className="card-sub">최근 30건 · 신규는 위로 슬라이드</div>
+                <div className="card-title">{dict[lang].live_stream_title}</div>
+                <div className="card-sub">{dict[lang].live_stream_sub}</div>
               </div>
-              <div className="muted-meta">{events.length}건</div>
+              <div className="muted-meta">{events.length}{dict[lang].live_count_suffix}</div>
             </div>
             <div className="stream">
-              {tagged.length === 0 && <div className="empty-msg pad">대기 중…</div>}
+              {tagged.length === 0 && <div className="empty-msg pad">{dict[lang].live_stream_idle}</div>}
               {tagged.map((e) => (
                 <div key={e._key} className={`stream-item ${e._new ? "fresh" : ""}`}>
                   <span className={`stream-dot ${eventTone(e.action)}`} />
                   <div className="stream-body">
                     <div className="stream-row">
-                      <span className={`stream-tag ${eventTone(e.action)}`}>{eventLabel(e.action)}</span>
+                      <span className={`stream-tag ${eventTone(e.action)}`}>{eventLabel(e.action, lang)}</span>
                       <span className="stream-time">{fmtTime(e.ts)}</span>
                     </div>
                     <div className="stream-msg">{e.reason_label || "—"}</div>
@@ -182,18 +188,18 @@ function LivePage({ lang }) {
                   <Icon name="Hand" size={28} strokeWidth={2.5} />
                 </div>
                 <div className="stop-text">
-                  <div className="stop-title">원격 정지</div>
-                  <div className="stop-sub">현재 주행 즉시 중단 · /sos_trigger 발행</div>
+                  <div className="stop-title">{dict[lang].live_remote_stop}</div>
+                  <div className="stop-sub">{dict[lang].live_remote_stop_sub}</div>
                 </div>
               </button>
             ) : (
               <div className="stop-active">
                 <Icon name="OctagonAlert" size={22} />
                 <div>
-                  <div className="stop-title">정지 명령 전송됨</div>
-                  <div className="stop-sub">관제실 확인 대기 중…</div>
+                  <div className="stop-title">{dict[lang].live_stop_sent}</div>
+                  <div className="stop-sub">{dict[lang].live_stop_wait}</div>
                 </div>
-                <button className="btn ghost sm" onClick={() => setStopped(false)}>해제</button>
+                <button className="btn ghost sm" onClick={() => setStopped(false)}>{dict[lang].live_stop_release}</button>
               </div>
             )}
           </div>
@@ -204,20 +210,20 @@ function LivePage({ lang }) {
         <div className="modal-back" onClick={() => setConfirmStop(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head danger">
-              <Icon name="OctagonAlert" size={18} /> 원격 정지 확인
+              <Icon name="OctagonAlert" size={18} /> {dict[lang].live_confirm_title}
             </div>
             <div className="modal-body">
-              <p>The wheelchair stops immediately. If a user is seated in it, a sudden impact may occur. </p>
-              <p className="mute small">조치: <span className="mono">/sos_trigger</span> 토픽으로 <span className="mono">"manual_stop"</span> 발행</p>
+              <p>{dict[lang].live_confirm_body}</p>
+              <p className="mute small">{dict[lang].live_confirm_action}</p>
             </div>
             <div className="modal-foot">
-              <button className="btn ghost" onClick={() => setConfirmStop(false)}>취소</button>
-              <button className="btn danger" onClick={() => { 
+              <button className="btn ghost" onClick={() => setConfirmStop(false)}>{dict[lang].common_cancel}</button>
+              <button className="btn danger" onClick={() => {
                   setConfirmStop(false);
                   setStopped(true);
-                  fetch('http://localhost:8090/api/remote_stop', { method: 'POST' }); 
+                  fetch('http://localhost:8090/api/remote_stop', { method: 'POST' });
                 }}>
-                  <Icon name="Hand" size={14} /> 정지 실행
+                  <Icon name="Hand" size={14} /> {dict[lang].live_confirm_execute}
                 </button>
             </div>
           </div>

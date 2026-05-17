@@ -15,13 +15,13 @@ function StatCard({ label, value, sub, accent, foot, icon }) {
   );
 }
 
-function HeatMap({ events }) {
+function HeatMap({ events, lang }) {
   // Plot events on a coordinate plane normalized to a 320x220 viewport
   const pts = events.filter((e) => e.pose && e.pose.x != null && e.pose.y != null);
   if (!pts.length) {
     return (
       <div className="heatmap empty">
-        <div className="empty-msg">위치 데이터가 있는 사고가 없습니다</div>
+        <div className="empty-msg">{dict[lang].overview_no_loc}</div>
       </div>
     );
   }
@@ -84,24 +84,24 @@ function HeatMap({ events }) {
         })}
       </svg>
       <div className="heatmap-legend">
-        <span><span className="lg-dot critical" /> 비상정지·SOS</span>
-        <span><span className="lg-dot warning" /> 명령수정</span>
-        <span className="mute">SLAM 좌표 (m)</span>
+        <span><span className="lg-dot critical" /> {dict[lang].overview_legend_estop}</span>
+        <span><span className="lg-dot warning" /> {dict[lang].overview_legend_cmd}</span>
+        <span className="mute">{dict[lang].overview_legend_meters}</span>
       </div>
     </div>
   );
 }
 
-function ReasonBars({ reasons }) {
+function ReasonBars({ reasons, lang }) {
   const total = reasons.reduce((s, r) => s + r.count, 0) || 1;
-  if (!reasons.length) return <div className="empty-msg pad">집계된 원인이 없습니다</div>;
+  if (!reasons.length) return <div className="empty-msg pad">{dict[lang].overview_no_reasons}</div>;
   return (
     <div className="reason-list">
       {reasons.map((r) => (
         <div key={r.key} className="reason-row">
           <div className="reason-row-head">
             <span className="reason-label">{r.label}</span>
-            <span className="reason-count">{r.count}건</span>
+            <span className="reason-count">{r.count}{dict[lang].overview_count_suffix}</span>
           </div>
           <div className="reason-bar-wrap">
             <div
@@ -134,13 +134,13 @@ function OverviewPage({ lang }) {
     return () => { alive = false; };
   }, [hours]);
 
-  if (!data) return <div className="loading">데이터 불러오는 중…</div>;
+  if (!data) return <div className="loading">{dict[lang].overview_loading}</div>;
 
   const sev = data.by_severity || {};
   const critical = sev.critical || 0;
   const warning = sev.warning || 0;
   const conf = data.avg_confidence;
-  const confGrade = conf == null ? "—" : conf >= 80 ? "양호" : conf >= 50 ? "보통" : "낮음";
+  const confGrade = conf == null ? "—" : conf >= 80 ? dict[lang].overview_conf_good : conf >= 50 ? dict[lang].overview_conf_ok : dict[lang].overview_conf_low;
   const confTone = conf == null ? "" : conf >= 80 ? "ok" : conf >= 50 ? "warn" : "danger";
 
   const chartData = data.by_day.length
@@ -151,21 +151,21 @@ function OverviewPage({ lang }) {
     <div className="page overview">
       <div className="row-stats">
         <StatCard
-          label={`최근 ${hours}h 이벤트`}
+          label={tdict(lang, "overview_recent_events", { h: hours })}
           value={data.recent_count}
-          sub={`전체 세션 ${data.session_count}건`}
+          sub={`${dict[lang].overview_total_sessions} ${data.session_count}${dict[lang].overview_count_suffix}`}
           icon="ActivitySquare"
           foot={
             <div className="split-foot">
-              <span className="chip critical"><span className="chip-dot" />위험 {critical}</span>
-              <span className="chip warning"><span className="chip-dot" />주의 {warning}</span>
+              <span className="chip critical"><span className="chip-dot" />{dict[lang].overview_critical} {critical}</span>
+              <span className="chip warning"><span className="chip-dot" />{dict[lang].overview_warning} {warning}</span>
             </div>
           }
         />
         <StatCard
-          label="평균 AI 신뢰도"
+          label={dict[lang].overview_avg_conf}
           value={conf == null ? "—" : `${conf}%`}
-          sub={`Qwen 분석 — ${confGrade}`}
+          sub={`${dict[lang].overview_qwen_analysis} — ${confGrade}`}
           accent={confTone}
           icon="Sparkles"
           foot={
@@ -177,25 +177,25 @@ function OverviewPage({ lang }) {
           }
         />
         <StatCard
-          label="휠체어 연결"
-          value={data.session_count > 0 ? "온라인" : "오프라인"}
-          sub={data.sessions[0] ? `최근 세션 ${fmtDate(data.sessions[0].started_at)}` : "데이터 없음"}
+          label={dict[lang].overview_wheelchair_link}
+          value={data.session_count > 0 ? dict[lang].overview_online : dict[lang].overview_offline}
+          sub={data.sessions[0] ? `${dict[lang].overview_last_session} ${fmtDate(data.sessions[0].started_at)}` : dict[lang].overview_no_data}
           accent="info"
           icon="Wifi"
           foot={
             <div className="mode-row">
-              <span className="mode-pill">자율주행</span>
-              <span className="mode-pill ghost">수동</span>
+              <span className="mode-pill">{dict[lang].overview_mode_auto}</span>
+              <span className="mode-pill ghost">{dict[lang].overview_mode_manual}</span>
             </div>
           }
         />
         <StatCard
-          label="저장된 보고서"
+          label={dict[lang].overview_saved_reports}
           value={data.session_count}
-          sub="driving_data 폴더"
+          sub={dict[lang].overview_data_folder}
           icon="FolderArchive"
           foot={
-            <div className="mute small">최신 .md 자동 파싱</div>
+            <div className="mute small">{dict[lang].overview_md_parse}</div>
           }
         />
       </div>
@@ -204,8 +204,8 @@ function OverviewPage({ lang }) {
         <div className="card">
           <div className="card-head">
             <div>
-              <div className="card-title">{dict[lang].overview_daily_events || "일자별 이벤트"}</div>
-              <div className="card-sub">위험(빨강) · 주의(주황) 스택</div>
+              <div className="card-title">{dict[lang].overview_daily_events}</div>
+              <div className="card-sub">{dict[lang].overview_stack_hint}</div>
             </div>
             <div className="seg">
               {[24, 72, 168].map((h) => (
@@ -223,8 +223,8 @@ function OverviewPage({ lang }) {
                 <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip cursor={{ fill: "rgba(15,23,42,0.04)" }} contentStyle={{ borderRadius: 8, border: "1px solid #e5e9f0", fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="critical" stackId="a" fill="#dc2626" name="위험" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="warning" stackId="a" fill="#ea7c1c" name="주의" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="critical" stackId="a" fill="#dc2626" name={dict[lang].overview_critical} radius={[3, 3, 0, 0]} />
+                <Bar dataKey="warning" stackId="a" fill="#ea7c1c" name={dict[lang].overview_warning} radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -233,23 +233,23 @@ function OverviewPage({ lang }) {
         <div className="card">
           <div className="card-head">
             <div>
-              <div className="card-title">{dict[lang].overview_detected_causes || "감지된 이상 원인"}</div>
-              <div className="card-sub">reason 키 별 집계</div>
+              <div className="card-title">{dict[lang].overview_detected_causes}</div>
+              <div className="card-sub">{dict[lang].overview_reason_sub}</div>
             </div>
           </div>
-          <ReasonBars reasons={data.reasons} />
+          <ReasonBars reasons={data.reasons} lang={lang} />
         </div>
       </div>
 
       <div className="card">
         <div className="card-head">
           <div>
-            <div className="card-title">{dict[lang].overview_accident_locations || "사고 발생 위치 히트맵"}</div>
-            <div className="card-sub">SLAM 좌표(pose.x / pose.y) — 점 크기는 빈도</div>
+            <div className="card-title">{dict[lang].overview_accident_locations}</div>
+            <div className="card-sub">{dict[lang].overview_heatmap_sub}</div>
           </div>
-          <div className="muted-meta">{data.events.filter((e) => e.pose && e.pose.x != null).length}개 좌표</div>
+          <div className="muted-meta">{data.events.filter((e) => e.pose && e.pose.x != null).length}{dict[lang].overview_coords}</div>
         </div>
-        <HeatMap events={data.events} />
+        <HeatMap events={data.events} lang={lang} />
       </div>
     </div>
   );

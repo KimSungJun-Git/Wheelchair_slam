@@ -1,13 +1,13 @@
 const { useState: useStateR, useEffect: useEffectR, useMemo: useMemoR } = React;
 
-function ConfidenceBar({ value, size = "lg" }) {
-  if (value == null) return <div className="conf-empty">신뢰도 미상</div>;
+function ConfidenceBar({ value, size = "lg", lang }) {
+  if (value == null) return <div className="conf-empty">{dict[lang || "ko"].reports_conf_unknown}</div>;
   const tone = value >= 80 ? "ok" : value >= 50 ? "warn" : "danger";
   return (
     <div className={`conf-block ${size}`}>
       <div className="conf-row">
         <span className="conf-num">{value}<span className="conf-pct">%</span></span>
-        <span className={`conf-grade ${tone}`}>{value >= 80 ? "양호" : value >= 50 ? "보통" : "낮음"}</span>
+        <span className={`conf-grade ${tone}`}>{value >= 80 ? dict[lang || "ko"].overview_conf_good : value >= 50 ? dict[lang || "ko"].overview_conf_ok : dict[lang || "ko"].overview_conf_low}</span>
       </div>
       <div className="conf-track">
         <div className={`conf-fill ${tone}`} style={{ width: `${value}%` }} />
@@ -16,7 +16,7 @@ function ConfidenceBar({ value, size = "lg" }) {
   );
 }
 
-function ReportCard({ r, active, onClick }) {
+function ReportCard({ r, active, onClick, lang }) {
   const counts = r.counts || {};
   const critical = (counts.blocked || 0) + (counts.sos || 0);
   const warning = counts.modified || 0;
@@ -25,12 +25,12 @@ function ReportCard({ r, active, onClick }) {
       <div className="rep-card-row">
         <div className="rep-date">{fmtDate(r.started_at)}</div>
         <div className={`rep-level ${critical > 0 ? "critical" : warning > 0 ? "warning" : "info"}`}>
-          {critical > 0 ? "위험" : warning > 0 ? "주의" : "정상"}
+          {critical > 0 ? dict[lang].reports_level_critical : warning > 0 ? dict[lang].reports_level_warning : dict[lang].reports_level_normal}
         </div>
       </div>
       <div className="rep-id">{r.filename}</div>
       <div className="rep-card-row sm">
-        <ConfidenceBar value={r.confidence} size="sm" />
+        <ConfidenceBar value={r.confidence} size="sm" lang={lang} />
       </div>
       <div className="rep-meta">
         <span><Icon name="AlertOctagon" size={12} /> {critical}</span>
@@ -58,7 +58,7 @@ function ReportsPage({lang}) {
       const res = await fetch('http://localhost:8090/api/deep_analyze', { method: 'POST' });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        setDeepStatus({ status: 'error', error: errData.detail || '서버 에러 발생' });
+        setDeepStatus({ status: 'error', error: errData.detail || dict[lang].deep_error_default });
         return;
       }
       
@@ -91,11 +91,7 @@ function ReportsPage({lang}) {
   useEffectR(() => {
     window.Api.getReports().then((d) => {
       setList(d.reports || []);
-      const firstWithMd = d.reports?.find(r => r.has_md);
-      const fallback = d.reports?.[0];
-      if (firstWithMd || fallback) {
-        setSelectedId((firstWithMd || fallback).id);
-      }
+      if (d.reports?.[0]) setSelectedId(d.reports[0].id);
     });
   }, []);
 
@@ -130,16 +126,16 @@ function ReportsPage({lang}) {
               disabled={deepStatus?.status === 'running' || deepStatus?.status === 'starting'}
               style={{ width: '100%', justifyContent: 'center' }}
             >
-              🤖 {dict[lang].btn_deep_analyze || "최신 로그 R1 깊은 진단"}
+              🤖 {dict[lang].btn_deep_analyze}
             </button>
             
             
             {deepStatus && (
               <div style={{ marginTop: '10px', fontSize: '13px', fontWeight: '500' }}>
-                {deepStatus.status === 'starting' && <span style={{color: '#d97706'}}>서버에 분석 요청 중...</span>}
-                {deepStatus.status === 'running' && <span style={{color: '#2563eb'}}>분석 중... ({deepStatus.target})</span>}
-                {deepStatus.status === 'done' && <span style={{color: '#16a34a'}}>✅ 분석 완료!</span>}
-                {deepStatus.status === 'error' && <span style={{color: '#dc2626'}}>❌ 실패: {deepStatus.error}</span>}
+                {deepStatus.status === 'starting' && <span style={{color: '#d97706'}}>{dict[lang].deep_starting}</span>}
+                {deepStatus.status === 'running' && <span style={{color: '#2563eb'}}>{dict[lang].deep_running} ({deepStatus.target})</span>}
+                {deepStatus.status === 'done' && <span style={{color: '#16a34a'}}>{dict[lang].deep_done}</span>}
+                {deepStatus.status === 'error' && <span style={{color: '#dc2626'}}>{dict[lang].deep_failed} {deepStatus.error}</span>}
               </div>
             )}
           </div>
@@ -148,16 +144,16 @@ function ReportsPage({lang}) {
               <Icon name="Search" size={14} className="search-icon" />
               <input
                 className="search-input"
-                placeholder="파일명 검색"
+                placeholder={dict[lang].reports_search}
                 value={filter.q}
                 onChange={(e) => setFilter({ ...filter, q: e.target.value })}
               />
             </div>
             <div className="filter-row seg">
               {[
-                ["all", "전체"],
-                ["critical", "위험"],
-                ["warning", "주의"],
+                ["all", dict[lang].reports_filter_all],
+                ["critical", dict[lang].reports_filter_critical],
+                ["warning", dict[lang].reports_filter_warning],
               ].map(([k, l]) => (
                 <button
                   key={k}
@@ -170,7 +166,7 @@ function ReportsPage({lang}) {
             </div>
             <div className="filter-row col">
               <div className="slider-head">
-                <span>신뢰도 ≥</span>
+                <span>{dict[lang].reports_conf_gte}</span>
                 <span className="mono">{filter.minConf}%</span>
               </div>
               <input
@@ -183,21 +179,21 @@ function ReportsPage({lang}) {
               />
             </div>
             <div className="filter-stat">
-              {filtered.length} / {list.length}건 표시
+              {filtered.length} / {list.length}{dict[lang].reports_shown_count}
             </div>
           </div>
 
           <div className="rep-list">
             {filtered.map((r) => (
-              <ReportCard key={r.id} r={r} active={r.id === selectedId} onClick={() => setSelectedId(r.id)} />
+              <ReportCard key={r.id} r={r} active={r.id === selectedId} onClick={() => setSelectedId(r.id)} lang={lang} />
             ))}
-            {!filtered.length && <div className="empty-msg pad">조건에 맞는 보고서가 없습니다</div>}
+            {!filtered.length && <div className="empty-msg pad">{dict[lang].reports_empty}</div>}
           </div>
         </div>
 
         <div className="rep-right">
           {!detail ? (
-            <div className="loading">보고서 로딩 중…</div>
+            <div className="loading">{dict[lang].reports_loading}</div>
           ) : (
             <ReportDetail
               report={detail}
@@ -205,6 +201,7 @@ function ReportsPage({lang}) {
               setShowRaw={setShowRaw}
               shareOpen={shareOpen}
               setShareOpen={setShareOpen}
+              lang={lang}
             />
           )}
         </div>
@@ -213,7 +210,7 @@ function ReportsPage({lang}) {
   );
 }
 
-function ReportDetail({ report, showRaw, setShowRaw, shareOpen, setShareOpen }) {
+function ReportDetail({ report, showRaw, setShowRaw, shareOpen, setShareOpen, lang }) {
   const counts = report.counts || {};
   const critical = (counts.blocked || 0) + (counts.sos || 0);
   const warning = counts.modified || 0;
@@ -235,37 +232,37 @@ function ReportDetail({ report, showRaw, setShowRaw, shareOpen, setShareOpen }) 
     <div className="detail">
       <div className="detail-head">
         <div className="detail-head-left">
-          <div className={`level-badge ${sev}`}>{sev === "critical" ? "위험" : sev === "warning" ? "주의" : "정상"}</div>
+          <div className={`level-badge ${sev}`}>{sev === "critical" ? dict[lang].reports_level_critical : sev === "warning" ? dict[lang].reports_level_warning : dict[lang].reports_level_normal}</div>
           <div>
             <div className="detail-title">{report.filename}</div>
             <div className="detail-sub">
-              {fmtDate(report.started_at)} → {fmtDate(report.ended_at)} · {Math.round(report.duration_sec)}s · {report.total} msg
+              {fmtDate(report.started_at)} → {fmtDate(report.ended_at)} · {Math.round(report.duration_sec)}s · {report.total} {dict[lang].reports_msg_count}
             </div>
           </div>
         </div>
         <div className="detail-actions">
           <button className={`btn ghost ${showRaw ? "active" : ""}`} onClick={() => setShowRaw(!showRaw)}>
-            <Icon name="Code" size={14} /> 원본 로그
+            <Icon name="Code" size={14} /> {dict[lang].reports_raw_log}
           </button>
           <button className="btn ghost" onClick={() => setShareOpen(true)}>
-            <Icon name="Share2" size={14} /> 보호자 공유
+            <Icon name="Share2" size={14} /> {dict[lang].reports_share}
           </button>
           <button className="btn primary" onClick={() => window.print()}>
-            <Icon name="Download" size={14} /> PDF
+            <Icon name="Download" size={14} /> {dict[lang].reports_pdf}
           </button>
         </div>
       </div>
 
       <div className="detail-confidence">
         <div className="dc-left">
-          <div className="dc-label">AI 신뢰도</div>
-          <ConfidenceBar value={report.confidence} />
+          <div className="dc-label">{dict[lang].reports_ai_confidence}</div>
+          <ConfidenceBar value={report.confidence} lang={lang} />
         </div>
         <div className="dc-right">
-          <div className="kpi"><span className="kpi-l">비상정지</span><span className="kpi-v critical">{counts.blocked || 0}</span></div>
-          <div className="kpi"><span className="kpi-l">SOS</span><span className="kpi-v critical">{counts.sos || 0}</span></div>
-          <div className="kpi"><span className="kpi-l">명령수정</span><span className="kpi-v warning">{counts.modified || 0}</span></div>
-          <div className="kpi"><span className="kpi-l">정상</span><span className="kpi-v">{counts.allowed || 0}</span></div>
+          <div className="kpi"><span className="kpi-l">{dict[lang].reports_kpi_estop}</span><span className="kpi-v critical">{counts.blocked || 0}</span></div>
+          <div className="kpi"><span className="kpi-l">{dict[lang].reports_kpi_sos}</span><span className="kpi-v critical">{counts.sos || 0}</span></div>
+          <div className="kpi"><span className="kpi-l">{dict[lang].reports_kpi_cmd}</span><span className="kpi-v warning">{counts.modified || 0}</span></div>
+          <div className="kpi"><span className="kpi-l">{dict[lang].reports_kpi_normal}</span><span className="kpi-v">{counts.allowed || 0}</span></div>
         </div>
       </div>
 
@@ -273,8 +270,8 @@ function ReportDetail({ report, showRaw, setShowRaw, shareOpen, setShareOpen }) 
         <div className="banner danger">
           <Icon name="AlertCircle" size={16} />
           <div>
-            <strong>추가 데이터 수집 필요</strong>
-            <div className="banner-sub">AI 신뢰도가 50% 미만입니다. 다음 주행 세션에서 더 많은 센서 로그를 확보하거나, 수동으로 사건을 라벨링하세요.</div>
+            <strong>{dict[lang].reports_low_conf_title}</strong>
+            <div className="banner-sub">{dict[lang].reports_low_conf_sub}</div>
           </div>
         </div>
       )}
@@ -282,7 +279,7 @@ function ReportDetail({ report, showRaw, setShowRaw, shareOpen, setShareOpen }) 
       {showRaw ? (
         <div className="raw-pane">
           <div className="raw-head">
-            <span>{report.raw_lines?.length || 0}줄 표시{report.raw_truncated ? " (절단됨)" : ""}</span>
+            <span>{report.raw_lines?.length || 0}{dict[lang].reports_raw_lines}{report.raw_truncated ? dict[lang].reports_raw_truncated : ""}</span>
           </div>
           <pre className="raw-pre">
             {(report.raw_lines || []).map((l, i) => JSON.stringify(l)).join("\n")}
@@ -295,15 +292,15 @@ function ReportDetail({ report, showRaw, setShowRaw, shareOpen, setShareOpen }) 
       {shareOpen && (
         <div className="modal-back" onClick={() => setShareOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">보호자에게 공유</div>
+            <div className="modal-head">{dict[lang].share_modal_title}</div>
             <div className="modal-body">
-              <p>이 보고서를 등록된 보호자에게 이메일로 전송합니다. 본문에는 마크다운 요약과 사건 좌표가 포함됩니다.</p>
-              <label className="modal-row"><input type="checkbox" defaultChecked /> 원본 로그 첨부</label>
-              <label className="modal-row"><input type="checkbox" defaultChecked /> SLAM 위치 이미지 포함</label>
+              <p>{dict[lang].share_modal_body}</p>
+              <label className="modal-row"><input type="checkbox" defaultChecked /> {dict[lang].share_modal_attach_log}</label>
+              <label className="modal-row"><input type="checkbox" defaultChecked /> {dict[lang].share_modal_attach_pose}</label>
             </div>
             <div className="modal-foot">
-              <button className="btn ghost" onClick={() => setShareOpen(false)}>취소</button>
-              <button className="btn primary" onClick={() => setShareOpen(false)}>전송</button>
+              <button className="btn ghost" onClick={() => setShareOpen(false)}>{dict[lang].common_cancel}</button>
+              <button className="btn primary" onClick={() => setShareOpen(false)}>{dict[lang].common_send}</button>
             </div>
           </div>
         </div>

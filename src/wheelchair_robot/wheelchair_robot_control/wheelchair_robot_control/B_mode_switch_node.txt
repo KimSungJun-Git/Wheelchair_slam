@@ -178,61 +178,7 @@ class ModeSwitchNode(Node):
     # ===== 홈 귀환 =====
     def go_home_callback(self, msg):
         self.get_logger().info('홈 귀환 명령 수신')
-        self._send_home_goal()
-
-    def _send_home_goal(self):
-        """대기소 좌표로 NavigateToPose 전송"""
-        # 자율주행 모드로 전환
-        if self.mode == 'manual':
-            self.mode = 'auto'
-            self.get_logger().info('>>> 홈 귀환을 위해 자율주행 모드로 전환')
-
-        # 기존 goal 취소
-        self.cancel_nav()
-
-        if not self._nav_client.wait_for_server(timeout_sec=3.0):
-            self.get_logger().error('navigate_to_pose 서버 연결 실패')
-            return
-
-        goal = NavigateToPose.Goal()
-        goal.pose.header.frame_id = 'map'
-        goal.pose.header.stamp = self.get_clock().now().to_msg()
-        goal.pose.pose.position.x = self.home_pose['x']
-        goal.pose.pose.position.y = self.home_pose['y']
-
-        q = quaternion_from_yaw(self.home_pose['yaw'])
-        goal.pose.pose.orientation.z = q[2]
-        goal.pose.pose.orientation.w = q[3]
-
-        self.get_logger().info(
-            f'홈 좌표로 이동: x={self.home_pose["x"]}, y={self.home_pose["y"]}')
-
-        send_future = self._nav_client.send_goal_async(
-            goal, feedback_callback=self._home_feedback_cb)
-        send_future.add_done_callback(self._home_response_cb)
-    
-    def _home_response_cb(self, future):
-        goal_handle = future.result()
-        if not goal_handle.accepted:
-            self.get_logger().warn('홈 귀환 Goal 거부됨!')
-            return
-        self.get_logger().info('홈 귀환 Goal 수락 - 이동 중')
-        self._goal_handle = goal_handle
-
-        # 도착 완료 콜백
-        result_future = goal_handle.get_result_async()
-        result_future.add_done_callback(self._home_result_cb)
-
-    def _home_feedback_cb(self, feedback_msg):
-        remaining = feedback_msg.feedback.distance_remaining
-        self.get_logger().info(f'귀환 중... 남은 거리: {remaining:.2f}m')
-
-    def _home_result_cb(self, future):
-        self._goal_locked = False
-        self.get_logger().info('홈 도착 완료 → 수동 모드로 전환')
-        self.mode = 'manual'
-        self._goal_handle = None
-        self.cmd_pub.publish(Twist())
+        self._send_destination_goal('home')
 
     # ===== 안전 알림 처리 =====
     def safety_alert_callback(self, msg):
@@ -344,7 +290,7 @@ class ModeSwitchNode(Node):
         if cmd == 'm':
             self.switch_mode()
         elif cmd == 'home':
-            self._send_home_goal()
+                self._send_destination_goal('home')
 
     def control_loop(self):
         if self.mode == 'auto':
@@ -425,7 +371,7 @@ class ModeSwitchNode(Node):
                 if key in ('m', 'M'):
                     self.switch_mode()
                 elif key in ('h', 'H'):
-                    self._send_home_goal()
+                    self._send_destination_goal('home')
                 elif key in ('q', 'Q'):
                     self.get_logger().info('종료합니다.')
                     rclpy.shutdown()

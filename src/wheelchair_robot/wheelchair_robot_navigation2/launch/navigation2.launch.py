@@ -2,8 +2,6 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, GroupAction
@@ -29,17 +27,6 @@ def generate_launch_description():
         DeclareLaunchArgument('map', default_value=default_map),
         DeclareLaunchArgument('params_file', default_value=default_param),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
-
-        ## ===== Nav2 Bringup =====
-        #IncludeLaunchDescription(
-        #    PythonLaunchDescriptionSource(
-        #        os.path.join(nav2_launch_dir, 'bringup_launch.py')),
-        #    launch_arguments={
-        #        'map': map_path,
-        #        'use_sim_time': use_sim_time,
-        #        'params_file': param_path,
-        #    }.items(),
-        #),
 
         # ===== Safety Stop Node =====
         Node(

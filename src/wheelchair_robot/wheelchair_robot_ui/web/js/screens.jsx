@@ -50,7 +50,7 @@ const TXT = {
   right: IS_ENG ? 'Turn Right' : '오른쪽 틀기'
 };
 
-function HomeScreen({ t, onSearch, onGoHome, onSOS, onEndSession }) {
+function HomeScreen({ onSearch, onGoHome, onSOS, onEndSession }) {
   return (
     <Frame>
       <StatusBar />
@@ -104,7 +104,7 @@ function HomeScreen({ t, onSearch, onGoHome, onSOS, onEndSession }) {
   );
 }
 
-function SearchScreen({ t, onBack, onGoHome, onStartRoute }) {
+function SearchScreen({ onBack, onGoHome, onStartRoute }) {
   return (
     <Frame>
       <StatusBar />
@@ -142,7 +142,7 @@ function SearchScreen({ t, onBack, onGoHome, onStartRoute }) {
   );
 }
 
-function NavScreen({ t, mode, distances, robotWorld, mapConfig, onBack, onGoHome, onStop, onManual, onAuto, onLane }) {
+function NavScreen({ mode, distances, robotWorld, mapConfig, onBack, onGoHome, onStop, onManual, onAuto, onLane }) {
   return (
     <Frame bg={TOKENS.color.mapFloor}>
       <div style={{ position: 'absolute', inset: 0, background: TOKENS.color.mapBg }}>
@@ -187,7 +187,7 @@ const getAlertInfo = (reason) => {
   return dict[reason] || dict.default;
 };
 
-function AlertScreen({ t, alertReason, robotWorld, mapConfig, onResume, onManual, onBack, onGoHome, onGoHomeBase }) {
+function AlertScreen({ alertReason, robotWorld, mapConfig, onResume, onManual, onBack, onGoHome, onGoHomeBase }) {
   const info = getAlertInfo(alertReason);
   const C = TOKENS.color;
   const isDanger = info.tone === 'danger';
@@ -228,12 +228,12 @@ function AlertScreen({ t, alertReason, robotWorld, mapConfig, onResume, onManual
   );
 }
 
-function JoystickScreen({ t, robotWorld, mapConfig, onBack, onGoHome, setMode, cmdVelPub }) {
+function JoystickScreen({ robotWorld, mapConfig, onBack, onGoHome, setMode, cmdVelPub }) {
   const C = TOKENS.color;
   const [activeBtn, setActiveBtn] = React.useState(null);
   const intervalRef = React.useRef(null);
-  const SPEED_LINEAR = 0.3; 
-  const SPEED_ANGULAR = 0.5; 
+  const SPEED_LINEAR = 0.1; 
+  const SPEED_ANGULAR = 0.1; 
 
   const publishCmd = (dir) => {
     if (!cmdVelPub) return;

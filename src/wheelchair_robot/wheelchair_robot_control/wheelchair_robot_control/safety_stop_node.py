@@ -29,7 +29,6 @@ class SafetyStopNode(Node):
         self.create_subscription(Bool, '/emergency_stop/imu', self.imu_emergency_cb, 10)
         self.create_subscription(Bool, '/emergency_stop/localization', self.localization_emergency_cb, 10)
 
-        #self.cmd_pub = self.create_publisher(Twist, '/cmd_vel_safe', 10)
         self.nav_cmd_pub = self.create_publisher(Twist, '/cmd_vel_safe', 10)
         self.lane_cmd_pub = self.create_publisher(Twist, '/cmd_vel_lane_safe', 10)
         
@@ -93,7 +92,6 @@ class SafetyStopNode(Node):
 
         self.get_logger().info(
             f'Safety Stop Node 시작 | 전방 정지: {self.danger_distance_m*100:.0f}cm | '
-            #f'헬스체크 활성화 (라이다/IMU/초음파/모터)')
             f'헬스체크 활성화 (라이다/IMU/초음파/모터) | '
             f'입력: /cmd_vel_nav, /cmd_vel_lane')
     #  센서 위험 상태 갱신
@@ -186,10 +184,7 @@ class SafetyStopNode(Node):
 
     #  Cmd Vel 게이트웨이
     def nav_cmd_callback(self, msg: Twist):
-        #self.process_and_publish(msg, "Navigation")
         self.process_and_publish(msg, "Navigation", self.nav_cmd_pub)
-    #def process_and_publish(self, msg, source):
-    #    """모든 cmd_vel이 거쳐가는 단일 안전 게이트웨이"""
     def lane_cmd_callback(self, msg: Twist):
         self.process_and_publish(msg, "Lane", self.lane_cmd_pub)
 
@@ -198,25 +193,26 @@ class SafetyStopNode(Node):
 
         # 1) 비상 정지
         if self.is_emergency:
-            #self.cmd_pub.publish(Twist())
             publisher.publish(Twist())
             self.publish_action(source, 'blocked', ','.join(self.dangerous_sensors))
             return
         
         # 2) 초음파 전방 장애물
         safe_msg = Twist()
-        safe_msg.linear = msg.linear
-        safe_msg.angular = msg.angular
+        safe_msg.linear.x = msg.linear.x
+        safe_msg.linear.y = msg.linear.y
+        safe_msg.linear.z = msg.linear.z
+        safe_msg.angular.x = msg.angular.x
+        safe_msg.angular.y = msg.angular.y
+        safe_msg.angular.z = msg.angular.z
 
         if msg.linear.x > 0.0 and self.dist_front <= self.danger_distance_m:
             safe_msg.linear.x = 0.0
-            #self.cmd_pub.publish(safe_msg)
             publisher.publish(safe_msg)
             self.publish_action(source, 'modified', 'obstacle_front')
             return
 
         # 3) 정상 통과
-        #self.cmd_pub.publish(safe_msg)
         publisher.publish(safe_msg)
         self.publish_action(source, 'allowed', '')
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 import os
 import re
@@ -446,20 +445,6 @@ def remote_stop():
         from fastapi import HTTPException
         raise HTTPException(500, f"명령 전송 실패: {str(e)}")
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Wheelchair Admin Dashboard API")
-    parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=PORT)
-    parser.add_argument("--data-dir", default=str(DATA_DIR))
-    parser.add_argument("--reload", action="store_true", help="dev autoreload")
-    args = parser.parse_args()
-
-    DATA_DIR = Path(os.path.expanduser(args.data_dir))
-    print(f"📁 data_dir = {DATA_DIR} ({'OK' if DATA_DIR.exists() else '없음'})")
-    print(f"🔌 http://{args.host}:{args.port}/api/health")
-    uvicorn.run("server:app" if args.reload else app, host=args.host, port=args.port, reload=args.reload)
-
-
 def main(args=None):
     global DATA_DIR
     parser = argparse.ArgumentParser(description="Wheelchair Admin Dashboard API")
@@ -472,7 +457,9 @@ def main(args=None):
     DATA_DIR = Path(os.path.expanduser(parsed.data_dir))
     print(f"📁 data_dir = {DATA_DIR} ({'OK' if DATA_DIR.exists() else '없음'})")
     print(f"🔌 http://{parsed.host}:{parsed.port}/api/health")
-    uvicorn.run(app, host=parsed.host, port=parsed.port, reload=parsed.reload)
+    
+    app_target = "server:app" if parsed.reload else app
+    uvicorn.run(app_target, host=parsed.host, port=parsed.port, reload=parsed.reload)
 
 
 if __name__ == "__main__":

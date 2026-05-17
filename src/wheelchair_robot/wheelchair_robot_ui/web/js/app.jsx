@@ -5,7 +5,6 @@ function AppInner() {
   const [rosConnected, setRosConnected] = React.useState(false);
   const [confirm, setConfirm] = React.useState(null); 
 
-  const t = I18N['ko'];
   const act = useActivity();
   const actRef = React.useRef(act);
   actRef.current = act;
@@ -74,6 +73,7 @@ function AppInner() {
     const destPub = new ROSLIB.Topic({ ros, name: '/destination', messageType: 'std_msgs/String' });
     const modeSwitchPub = new ROSLIB.Topic({ ros, name: '/mode_switch', messageType: 'std_msgs/String' });
     const cmdVelPub = new ROSLIB.Topic({ ros, name: '/cmd_vel_teleop', messageType: 'geometry_msgs/Twist' });
+    const sosPub = new ROSLIB.Topic({ ros, name: '/sos_trigger', messageType: 'std_msgs/String' });
 
     // ===== Subscriber =====
     const modeSub = new ROSLIB.Topic({ ros, name: '/robot_mode', messageType: 'std_msgs/String' });
@@ -295,7 +295,7 @@ function AppInner() {
       else actRef.current.logEvent('✅ 일반구역 복귀');
     });
 
-    setRosTopics({ destPub, modeSwitchPub, cmdVelPub });
+    setRosTopics({ destPub, modeSwitchPub, cmdVelPub, sosPub });
     return () => {
       modeSub.unsubscribe();
       scanSub.unsubscribe();
@@ -435,7 +435,10 @@ function AppInner() {
         }
         act.cancelAllActive('긴급 정지');
         act.logEvent('🛑 SOS 긴급 호출');
-        if (rosTopics) rosTopics.cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
+        if (rosTopics) {
+          rosTopics.cmdVelPub.publish(new ROSLIB.Message({ linear: {x:0, y:0, z:0}, angular: {x:0, y:0, z:0} }));
+          rosTopics.sosPub.publish(new ROSLIB.Message({ data: 'user_sos' }));
+        }
         setAlertReason('sos');
         pushScreen('alert');
       },
@@ -499,8 +502,6 @@ function AppInner() {
     }
   };
   const navToLane = () => {
-    console.log('[NAV_TO_LANE] 호출됨', new Error().stack);
-
     if (navTaskRef.current != null) {
       act.cancelActivity(navTaskRef.current, '차선 주행 모드 전환');
       navTaskRef.current = null;
@@ -545,12 +546,12 @@ function AppInner() {
 
   let screen;
   switch (currentScreen) {
-    case 'home':     screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} onEndSession={askEndSession} />; break;
-    case 'search':   screen = <SearchScreen t={t} onBack={popScreen} onGoHome={goHomeAll} onStartRoute={askStartNavigation} />; break;
-    case 'nav':      screen = <NavScreen t={t} mode={mode} distances={distances} robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onStop={stopNavigation} onManual={navToManual} onAuto={navToAuto} onLane={navToLane} />; break;
-    case 'alert':    screen = <AlertScreen t={t} alertReason={alertReason} robotWorld={robotWorld} mapConfig={mapConfig} onResume={resumeNav} onManual={navToManual} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onGoHomeBase={askGoHomeBase} />; break;
-    case 'joystick': screen = <JoystickScreen t={t} robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} setMode={joystickToAuto} cmdVelPub={rosTopics?.cmdVelPub} />; break;
-    default: screen = <HomeScreen t={t} onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} onEndSession={askEndSession} />;
+    case 'home':     screen = <HomeScreen onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} onEndSession={askEndSession} />; break;
+    case 'search':   screen = <SearchScreen onBack={popScreen} onGoHome={goHomeAll} onStartRoute={askStartNavigation} />; break;
+    case 'nav':      screen = <NavScreen mode={mode} distances={distances} robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onStop={stopNavigation} onManual={navToManual} onAuto={navToAuto} onLane={navToLane} />; break;
+    case 'alert':    screen = <AlertScreen alertReason={alertReason} robotWorld={robotWorld} mapConfig={mapConfig} onResume={resumeNav} onManual={navToManual} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} onGoHomeBase={askGoHomeBase} />; break;
+    case 'joystick': screen = <JoystickScreen robotWorld={robotWorld} mapConfig={mapConfig} onBack={askCancelNav('back')} onGoHome={askCancelNav('home')} setMode={joystickToAuto} cmdVelPub={rosTopics?.cmdVelPub} />; break;
+    default: screen = <HomeScreen onSearch={goSearch} onGoHome={askGoHomeBase} onSOS={triggerSOS} onEndSession={askEndSession} />;
   
   }
 
