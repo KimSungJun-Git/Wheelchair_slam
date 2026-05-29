@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>wheelchair_robot_fake</name>
+  <version>0.0.1</version>
+  <description>하드웨어 없이 RViz에서 SLAM/위치추정을 돌리기 위한 가짜 센서 노드 모음</description>
+  <maintainer email="ksjun100848@naver.com">kim</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>wheelchair_robot_description</exec_depend>
+  <exec_depend>wheelchair_robot_control</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

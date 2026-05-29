@@ -37,13 +37,13 @@ REASON_LABEL: dict[str, str] = {
     "obstacle_front":         "전방 장애물",
 }
 
-DEDUP_WINDOW_SEC = 5.0  
+DEDUP_WINDOW_SEC = 5.0
 
 def split_reasons(reason_str):
     """콤마로 합쳐진 reason을 분리. 'key:상세값' 형태면 key만 추출."""
     if not reason_str:
         return tuple()
-    
+
     normalized = []
     for r in reason_str.split(","):
         r = r.strip()
@@ -53,7 +53,7 @@ def split_reasons(reason_str):
         key = r.split(":")[0].strip()
         if key:
             normalized.append(key)
-    
+
     return tuple(sorted(set(normalized)))
 
 
@@ -303,7 +303,7 @@ def main(args=None):
             f.write("\n\n---\n\n")
             f.write(report_content)
         print(f"\033[92m💾 분석 리포트 저장: {report_filename}\033[0m")
-    except Exception as e:
+    except OSError as e:
         print(f"\033[91m⚠️ 리포트 저장 실패: {e}\033[0m")
 
 
