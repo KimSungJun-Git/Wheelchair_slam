@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>wheelchair_robot_fake</name>
-  <version>0.0.1</version>
-  <description>하드웨어 없이 RViz에서 SLAM/위치추정을 돌리기 위한 가짜 센서 노드 모음</description>
+  <version>0.0.2</version>
+  <description>하드웨어 없이 RViz/Nav2/SLAM 전체 파이프라인을 돌리기 위한 가짜 센서 패키지</description>
   <maintainer email="ksjun100848@naver.com">kim</maintainer>
   <license>Apache-2.0</license>
 
@@ -16,6 +16,13 @@
   <exec_depend>rviz2</exec_depend>
   <exec_depend>wheelchair_robot_description</exec_depend>
   <exec_depend>wheelchair_robot_control</exec_depend>
+  <exec_depend>wheelchair_robot_navigation2</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_amcl</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>topic_tools</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

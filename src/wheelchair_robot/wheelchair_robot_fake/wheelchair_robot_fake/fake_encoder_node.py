@@ -27,15 +27,22 @@ class FakeEncoderNode(Node):
         self.declare_parameter('noise_std_v', 0.01)   # 선속도 측정 노이즈 (m/s)
         self.declare_parameter('noise_std_w', 0.01)   # 각속도 측정 노이즈 (rad/s)
         self.declare_parameter('cmd_timeout', 0.5)    # cmd_vel이 끊기면 정지로 간주 (s)
+        # 속도/가속도 제한 (실제 휠체어처럼 부드러운 거동)
+        self.declare_parameter('max_linear_velocity', 0.3)
+        self.declare_parameter('max_angular_velocity', 1.0)
+        self.declare_parameter('max_linear_accel', 0.4)
+        self.declare_parameter('max_angular_accel', 2.0)
 
-        # rclpy의 get_parameter_value() 메서드를 사용하여 타입을 명확히 지정
-        # double_value는 float를, string_value는 str을 반환하므로 Pylance가 인식할 수 있습니다.
-        self.rate = self.get_parameter('publish_rate').get_parameter_value().double_value
-        self.odom_frame = self.get_parameter('odom_frame').get_parameter_value().string_value
-        self.base_frame = self.get_parameter('base_frame').get_parameter_value().string_value
-        self.noise_v = self.get_parameter('noise_std_v').get_parameter_value().double_value
-        self.noise_w = self.get_parameter('noise_std_w').get_parameter_value().double_value
-        self.cmd_timeout = self.get_parameter('cmd_timeout').get_parameter_value().double_value
+        self.rate = self.get_parameter('publish_rate').value
+        self.odom_frame = self.get_parameter('odom_frame').value
+        self.base_frame = self.get_parameter('base_frame').value
+        self.nv = self.get_parameter('noise_std_v').value
+        self.nw = self.get_parameter('noise_std_w').value
+        self.cmd_timeout = self.get_parameter('cmd_timeout').value
+        self.max_v = float(self.get_parameter('max_linear_velocity').value)
+        self.max_w = float(self.get_parameter('max_angular_velocity').value)
+        self.max_a = float(self.get_parameter('max_linear_accel').value)
+        self.max_alpha = float(self.get_parameter('max_angular_accel').value)
 
         # ── 상태 ─────────────────────────────────────────────────────
         self.x = 0.0
@@ -43,13 +50,14 @@ class FakeEncoderNode(Node):
         self.yaw = 0.0
         self.v_cmd = 0.0
         self.w_cmd = 0.0
+        self.v_applied = 0.0
+        self.w_applied = 0.0
         self.last_cmd_time = self.get_clock().now()
         self.last_tick_time = self.get_clock().now()
 
         # ── 통신 ─────────────────────────────────────────────────────
         self.create_subscription(Twist, '/cmd_vel', self.cmd_cb, 10)
         self.odom_pub = self.create_publisher(Odometry, '/odom', 10)
-        
         self.create_timer(1.0 / self.rate, self.tick)
 
         self.get_logger().info(
@@ -63,26 +71,41 @@ class FakeEncoderNode(Node):
 
     def tick(self):
         now = self.get_clock().now()
-        delta_t = (now - self.last_tick_time).nanoseconds * 1e-9
-        if delta_t <= 0.0:
+        dt = (now - self.last_tick_time).nanoseconds * 1e-9
+        if dt <= 0.0:
             return
         self.last_tick_time = now
 
         # cmd_vel 끊기면 정지
         if (now - self.last_cmd_time).nanoseconds * 1e-9 > self.cmd_timeout:
-            v_true, w_true = 0.0, 0.0
+            v_target, w_target = 0.0, 0.0
         else:
-            v_true, w_true = self.v_cmd, self.w_cmd
+            v_target, w_target = self.v_cmd, self.w_cmd
+
+        # 속도 캡
+        v_target = max(-self.max_v, min(self.max_v, v_target))
+        w_target = max(-self.max_w, min(self.max_w, w_target))
+
+        # 가속도 제한 (slew rate)
+        max_dv = self.max_a * dt
+        max_dw = self.max_alpha * dt
+        dv = max(-max_dv, min(max_dv, v_target - self.v_applied))
+        dw = max(-max_dw, min(max_dw, w_target - self.w_applied))
+        self.v_applied += dv
+        self.w_applied += dw
+
+        v_true = self.v_applied
+        w_true = self.w_applied
 
         # ground truth 위치 적분
-        self.x += v_true * math.cos(self.yaw) * delta_t
-        self.y += v_true * math.sin(self.yaw) * delta_t
-        self.yaw += w_true * delta_t
+        self.x += v_true * math.cos(self.yaw) * dt
+        self.y += v_true * math.sin(self.yaw) * dt
+        self.yaw += w_true * dt
         self.yaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))
 
         # 측정값에 노이즈 추가
-        v_meas = v_true + random.gauss(0.0, self.noise_v)
-        w_meas = w_true + random.gauss(0.0, self.noise_w)
+        v_meas = v_true + random.gauss(0.0, self.nv)
+        w_meas = w_true + random.gauss(0.0, self.nw)
 
         # Odometry 메시지 작성
         odom = Odometry()

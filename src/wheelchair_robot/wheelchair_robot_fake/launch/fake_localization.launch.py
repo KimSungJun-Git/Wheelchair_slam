@@ -154,6 +154,14 @@ def generate_launch_description():
             }],
         ),
 
+        # 4'. 가짜 초음파 (선택적, safety_stop과 함께 사용 시 필요)
+        Node(
+            package='wheelchair_robot_fake',
+            executable='fake_ultrasonic_node',
+            name='fake_ultrasonic_node',
+            output='screen',
+        ),
+
         # 5. EKF
         Node(
             package='robot_localization',
@@ -203,12 +211,12 @@ def generate_launch_description():
         OpaqueFunction(function=_make_initial_pose_action),
 
         # 10. RViz
-        #Node(
-        #    package='rviz2',
-        #    executable='rviz2',
-        #    name='rviz2',
-        #    output='screen',
-        #    arguments=['-d', rviz_config],
-        #    condition=IfCondition(use_rviz),
-        #),
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='screen',
+            arguments=['-d', rviz_config],
+            condition=IfCondition(use_rviz),
+        ),
     ])
