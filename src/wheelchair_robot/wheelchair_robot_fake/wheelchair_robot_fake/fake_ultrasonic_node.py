@@ -34,7 +34,7 @@ class FakeUltrasonicNode(Node):
     def __init__(self):
         super().__init__('fake_ultrasonic_node')
 
-        # 파라미터
+        # 파라미터 선언
         self.declare_parameter('publish_rate', 20.0)
         self.declare_parameter('default_range', 0.45)
         self.declare_parameter('danger_range', 0.10)
@@ -42,12 +42,13 @@ class FakeUltrasonicNode(Node):
         self.declare_parameter('max_range', 0.5)
         self.declare_parameter('field_of_view', 0.26)
 
-        self.rate = float(self.get_parameter('publish_rate').value)
-        self.default_range = float(self.get_parameter('default_range').value)
-        self.danger_range = float(self.get_parameter('danger_range').value)
-        self.min_range = float(self.get_parameter('min_range').value)
-        self.max_range = float(self.get_parameter('max_range').value)
-        self.fov = float(self.get_parameter('field_of_view').value)
+        # ── 파라미터 값 가져오기 및 타입 명시 (Pylance 에러 해결) ──────────────────
+        self.rate = float(self.get_parameter('publish_rate').value or 20.0)
+        self.default_range = float(self.get_parameter('default_range').value or 0.45)
+        self.danger_range = float(self.get_parameter('danger_range').value or 0.10)
+        self.min_range = float(self.get_parameter('min_range').value or 0.02)
+        self.max_range = float(self.get_parameter('max_range').value or 0.5)
+        self.fov = float(self.get_parameter('field_of_view').value or 0.26)
 
         # 클램프
         self.default_range = max(self.min_range + 0.01,

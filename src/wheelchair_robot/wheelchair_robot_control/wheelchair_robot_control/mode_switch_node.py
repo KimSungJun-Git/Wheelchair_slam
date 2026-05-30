@@ -45,7 +45,6 @@ class ModeSwitchNode(Node):
         # ===== 토픽 구독 =====
         self.nav_cmd_sub = self.create_subscription(Twist, '/cmd_vel_safe', self.nav_cmd_callback, 10)
         self.teleop_cmd_sub = self.create_subscription(Twist, '/cmd_vel_teleop', self.teleop_cmd_callback, 10)
-        self.lane_cmd_sub = self.create_subscription(Twist, '/cmd_vel_lane_safe', self.lane_cmd_callback, 10) ####
         self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
 
         # ===== Nav2 Action Client =====
@@ -73,9 +72,7 @@ class ModeSwitchNode(Node):
         # ===== 최신 명령 저장 =====
         self.latest_nav_cmd = Twist()
         self.latest_teleop_cmd = Twist()
-        self.latest_lane_cmd = Twist()
         self.last_teleop_time = 0.0
-        self.last_lane_time = 0.0
         # ===== 타이머 =====
         self.create_timer(0.1, self.control_loop)
         self.create_timer(1.0, self.publish_mode)
@@ -94,7 +91,6 @@ class ModeSwitchNode(Node):
         self.get_logger().info(
             f'Mode Switch Node 시작 - 현재 모드: {self.mode}\n'
             f'  [m] 모드 전환 (manual <-> auto)\n'
-            f'  [l] 차선 주행 모드\n'            
             f'  [h] 홈 귀환\n'
             f'  [q] 종료\n'
             f'  홈 좌표: x={self.home_pose["x"]}, y={self.home_pose["y"]}')
@@ -255,15 +251,10 @@ class ModeSwitchNode(Node):
             # 자율 모드 중일 때만 처리 (수동 모드면 이미 사용자가 조작 중)
             #if self.mode == 'auto':
             # 자동 계열 모드 중일 때만 강제 수동 전환
-            if self.mode in ('auto', 'lane'):
+            if self.mode == 'auto':
                 self.get_logger().error(
-                    #'⚠️ 전방 장애물 감지 → Nav2 goal 취소 + 수동 모드 전환\n'
-                    #'    탑승자: 직접 회피 후 [m] 키로 자율 모드 재시작 가능')
-                #self.cancel_nav()
-                #self.mode = 'manual'
-                #self.cmd_pub.publish(Twist())
                     '⚠️ 전방 장애물 감지 → 주행 모드 해제 + 수동 모드 전환\n'
-                    '    탑승자: 직접 회피 후 [m] 또는 [l] 키로 주행 재시작 가능')
+                    '    탑승자: 직접 회피 후 [m] 키로 주행 재시작 가능')
                 self.set_mode('manual')
             else:
                 self.get_logger().warn(
@@ -272,8 +263,7 @@ class ModeSwitchNode(Node):
         elif msg.data == 'obstacle_cleared':
             # 정보용 로그만, 자동 재시작 안 함 (사용자가 결정)
             self.get_logger().info(
-                '✅ 전방 장애물 해소. 자율주행은 [m], 차선 주행은 [l] 키로 재시작')
-                #'✅ 전방 장애물 해소. 자율주행 재시작하려면 [m] 키 입력')
+                '✅ 전방 장애물 해소. 자율주행은 [m] 키로 재시작')
 
     # ===== 기존 기능 =====
     def goal_cb(self, msg: PoseStamped):
@@ -298,10 +288,6 @@ class ModeSwitchNode(Node):
     def nav_cmd_callback(self, msg):
         self.latest_nav_cmd = msg
     
-    def lane_cmd_callback(self, msg):
-        self.latest_lane_cmd = msg
-        self.last_lane_time = time.time()
-        
     def teleop_cmd_callback(self, msg):
         self.latest_teleop_cmd = msg
         self.last_teleop_time = time.time()
@@ -316,7 +302,7 @@ class ModeSwitchNode(Node):
             #    
             #    # 2. 현재 Nav2가 수행 중인 이동 작업을 취소합니다.
             #    self.cancel_nav()
-            if self.mode in ('auto', 'lane'):
+            if self.mode == 'auto':
                 self.get_logger().warn('>>> 사용자의 수동 조작 감지! 현재 주행 모드를 해제합니다.')
                 self.set_mode('manual')
                 
@@ -371,9 +357,7 @@ class ModeSwitchNode(Node):
             self.set_mode('auto')
         elif cmd == 'home':
             self._send_home_goal()
-        elif cmd == 'l':
-            self.set_mode('lane')
-        elif cmd in ('manual', 'auto', 'lane'):
+        elif cmd in ('manual', 'auto'):
             self.set_mode(cmd)
         else:
             self.get_logger().warn(f'알 수 없는 모드 명령: {cmd}')
@@ -381,11 +365,6 @@ class ModeSwitchNode(Node):
     def control_loop(self):
         if self.mode == 'auto':
             self.cmd_pub.publish(self.latest_nav_cmd)
-        elif self.mode == 'lane':
-            if time.time() - self.last_lane_time < 0.5:
-                self.cmd_pub.publish(self.latest_lane_cmd)
-            else:
-                self.cmd_pub.publish(Twist())
         else:
             if time.time() - self.last_teleop_time < 0.5:
                 self.cmd_pub.publish(self.latest_teleop_cmd)
@@ -402,11 +381,9 @@ class ModeSwitchNode(Node):
         self.cmd_pub.publish(Twist())
         self.latest_nav_cmd = Twist()
         self.latest_teleop_cmd = Twist()
-        self.latest_lane_cmd = Twist()
 
-        #if self.mode == 'manual':
     def set_mode(self, new_mode):
-        if new_mode not in ('manual', 'auto', 'lane'):
+        if new_mode not in ('manual', 'auto'):
             self.get_logger().warn(f'알 수 없는 모드: {new_mode}')
             return
 
@@ -425,11 +402,6 @@ class ModeSwitchNode(Node):
             self.cancel_nav()
             self.mode = 'manual'
             self.get_logger().info('>>> 수동 조작 모드로 전환')
-        elif new_mode == 'lane':
-            self.cancel_nav()
-            self.mode = 'lane'
-            self.get_logger().info('>>> 차선 주행 모드로 전환')
-            self.publish_mode()
 
 
     def switch_mode(self):
@@ -488,8 +460,6 @@ class ModeSwitchNode(Node):
                 key = sys.stdin.read(1)
                 if key in ('m', 'M'):
                     self.switch_mode()
-                elif key in ('l', 'L'):
-                    self.set_mode('lane')
                 elif key in ('h', 'H'):
                     self._send_home_goal()
                 elif key in ('q', 'Q'):

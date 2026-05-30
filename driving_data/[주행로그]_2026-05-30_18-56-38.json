@@ -1,0 +1,3 @@
+{"_session_marker": true, "event_type": "session_start", "timestamp": 1780134998.5937347, "session_name": "[주행로그]_2026-05-30_18-56-38.json"}
+{"_event_marker": true, "event_type": "sos", "event_label": "SOS", "timestamp": 1780134999.5159624, "snapshot_size": 1}
+{"source": "sos_trigger", "action": "sos", "reason": "localization_lost", "timestamp": 1780134999.5153494}

@@ -16,7 +16,6 @@ class SafetyStopNode(Node):
     def __init__(self):
         super().__init__('safety_stop_node')
         self.create_subscription(Twist, '/cmd_vel_nav', self.nav_cmd_callback, 10)
-        self.create_subscription(Twist, '/cmd_vel_lane', self.lane_cmd_callback, 10)
         # 초음파 (RELIABLE QoS, 일반 publisher와 매칭)
         self.create_subscription(Range, '/ultrasonic/range', self.front_callback, 10)
         self.create_subscription(Range, '/ultrasonic/left', self.left_callback, 10)
@@ -30,7 +29,6 @@ class SafetyStopNode(Node):
         self.create_subscription(Bool, '/emergency_stop/localization', self.localization_emergency_cb, 10)
 
         self.nav_cmd_pub = self.create_publisher(Twist, '/cmd_vel_safe', 10)
-        self.lane_cmd_pub = self.create_publisher(Twist, '/cmd_vel_lane_safe', 10)
         
         self.zone_pub = self.create_publisher(String, '/current_zone', 10)
         self.avoid_pub = self.create_publisher(String, '/avoidance_direction', 10)
@@ -93,7 +91,7 @@ class SafetyStopNode(Node):
         self.get_logger().info(
             f'Safety Stop Node 시작 | 전방 정지: {self.danger_distance_m*100:.0f}cm | '
             f'헬스체크 활성화 (라이다/IMU/초음파/모터) | '
-            f'입력: /cmd_vel_nav, /cmd_vel_lane')
+            f'입력: /cmd_vel_nav')
     #  센서 위험 상태 갱신
     def imu_emergency_cb(self, msg: Bool):
         self.set_reason('imu_emergency', msg.data)
@@ -185,11 +183,9 @@ class SafetyStopNode(Node):
     #  Cmd Vel 게이트웨이
     def nav_cmd_callback(self, msg: Twist):
         self.process_and_publish(msg, "Navigation", self.nav_cmd_pub)
-    def lane_cmd_callback(self, msg: Twist):
-        self.process_and_publish(msg, "Lane", self.lane_cmd_pub)
 
     def process_and_publish(self, msg, source, publisher):
-        """Nav2/Lane cmd_vel을 공통 안전 필터로 검사한 뒤 지정된 토픽으로 출력"""
+        """Nav2 cmd_vel을 공통 안전 필터로 검사한 뒤 지정된 토픽으로 출력"""
 
         # 1) 비상 정지
         if self.is_emergency:

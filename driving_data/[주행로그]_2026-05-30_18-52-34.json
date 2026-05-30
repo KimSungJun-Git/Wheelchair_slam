@@ -1,0 +1,3 @@
+{"_session_marker": true, "event_type": "session_start", "timestamp": 1780134754.0473518, "session_name": "[주행로그]_2026-05-30_18-52-34.json"}
+{"_event_marker": true, "event_type": "blocked", "event_label": "비상정지", "timestamp": 1780134830.005898, "snapshot_size": 1}
+{"source": "Navigation", "action": "blocked", "reason": "ultrasonic_lost", "timestamp": 1780134830.0053813, "pose": {"x": 0.001, "y": -0.017, "yaw": 0.045}, "velocity": {"linear": 0.0, "angular": 0.0}, "zone": "비상정지 | 위험 센서: ultrasonic_lost"}

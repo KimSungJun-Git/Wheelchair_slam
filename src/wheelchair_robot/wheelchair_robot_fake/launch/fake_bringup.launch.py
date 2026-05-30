@@ -152,6 +152,12 @@ def generate_launch_description():
             package='wheelchair_robot_fake', executable='fake_imu_node',
             name='fake_imu_node', output='screen',
         ),
+        
+        # 4. 안전 정지 노드(Safety Stop) 헬스체크 통과를 위한 가짜 초음파 센서
+        Node(
+            package='wheelchair_robot_fake', executable='fake_ultrasonic_node',
+            name='fake_ultrasonic_node', output='screen',
+        ),
 
         # 5. EKF
         Node(

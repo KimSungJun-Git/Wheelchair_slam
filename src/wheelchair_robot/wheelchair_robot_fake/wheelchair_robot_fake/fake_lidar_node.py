@@ -21,6 +21,7 @@ scenario_runner와 연동되는 제어 토픽 /fake/lidar_control (std_msgs/Stri
 import math
 import os
 import random
+from typing import List, Tuple
 
 import rclpy
 from rclpy.node import Node
@@ -74,7 +75,7 @@ class FakeLidarNode(Node):
     def __init__(self):
         super().__init__('fake_lidar_node')
 
-        # 파라미터
+        # 파라미터 선언
         self.declare_parameter('publish_rate', 10.0)
         self.declare_parameter('laser_frame', 'laser_frame')
         self.declare_parameter('num_samples', 360)
@@ -94,9 +95,6 @@ class FakeLidarNode(Node):
              2.0,  2.5, -1.0,  1.0,
             -2.0, -1.5,  1.0,  3.0,
         ])
-        # 임의 폴리곤 장애물 (맵 모드/룸 모드 모두 적용).
-        # 기본값: 사용자가 RViz에서 클릭한 4점 (P3 → P1 → P2 → P4 CCW)
-        # 빈 리스트로 두면 비활성. flat list: [x1, y1, x2, y2, ...]
         self.declare_parameter('extra_obstacle_polygon', [
             0.593,  0.308,   # P3
             0.901,  0.483,   # P1
@@ -110,18 +108,33 @@ class FakeLidarNode(Node):
         self.declare_parameter('max_linear_accel', 0.4)
         self.declare_parameter('max_angular_accel', 2.0)
 
-        self.rate = self.get_parameter('publish_rate').value
-        self.laser_frame = self.get_parameter('laser_frame').value
-        self.N = int(self.get_parameter('num_samples').value)
-        self.rmin = self.get_parameter('range_min').value
-        self.rmax = self.get_parameter('range_max').value
-        self.noise = self.get_parameter('noise_std').value
-        self.cmd_timeout = self.get_parameter('cmd_timeout').value
+        # ── 파라미터 값 안전하게 가져오기 및 타입 명시 (Pylance 에러 해결) ──────────────────
+        self.rate = float(self.get_parameter('publish_rate').value or 10.0)
+        self.laser_frame = str(self.get_parameter('laser_frame').value or 'laser_frame')
+        self.N = int(self.get_parameter('num_samples').value or 360)
+        self.rmin = float(self.get_parameter('range_min').value or 0.12)
+        self.rmax = float(self.get_parameter('range_max').value or 10.0)
+        self.noise = float(self.get_parameter('noise_std').value or 0.02)
+        self.cmd_timeout = float(self.get_parameter('cmd_timeout').value or 0.5)
 
-        self.init_x = float(self.get_parameter('initial_map_x').value)
-        self.init_y = float(self.get_parameter('initial_map_y').value)
-        self.init_yaw = float(self.get_parameter('initial_map_yaw').value)
-        self.map_yaml = self.get_parameter('map_yaml').value.strip()
+        self.init_x = float(self.get_parameter('initial_map_x').value or 0.0)
+        self.init_y = float(self.get_parameter('initial_map_y').value or 0.0)
+        self.init_yaw = float(self.get_parameter('initial_map_yaw').value or 0.0)
+        
+        raw_map_yaml = self.get_parameter('map_yaml').value
+        self.map_yaml = str(raw_map_yaml).strip() if raw_map_yaml is not None else ""
+
+        # 초기 맵 해상도 및 원점 멤버 필드 사전 정의 (Pylance Type Narrowing 목적)
+        self.map_resolution = 0.05
+        self.map_origin_x = 0.0
+        self.map_origin_y = 0.0
+        self.map_w = 0
+        self.map_h = 0
+        self.occ_grid = []  # type: List[List[bool]]
+
+        # 가상 룸 경계 및 사각형 장애물 전역 정의
+        self.xmin, self.xmax, self.ymin, self.ymax = -5.0, 5.0, -5.0, 5.0
+        self.obstacles = []  # type: List[Tuple[float, float, float, float]]
 
         self.use_map = bool(self.map_yaml)
         if self.use_map:
@@ -129,20 +142,21 @@ class FakeLidarNode(Node):
         else:
             self._setup_virtual_room()
 
-        # 추가 폴리곤 장애물 파싱
-        poly_flat = list(self.get_parameter('extra_obstacle_polygon').value)
-        self.extra_poly = []
+        # 추가 폴리곤 장애물 파싱 및 Iterable 에러 예외 처리
+        poly_param = self.get_parameter('extra_obstacle_polygon').value
+        poly_flat = list(poly_param) if poly_param is not None else []
+        self.extra_poly = []  # type: List[Tuple[float, float]]
         for i in range(0, len(poly_flat) - 1, 2):
             self.extra_poly.append((float(poly_flat[i]), float(poly_flat[i + 1])))
         if self.extra_poly and len(self.extra_poly) < 3:
             self.get_logger().warn(f'폴리곤은 3점 이상 필요. 현재 {len(self.extra_poly)}점 → 무시.')
             self.extra_poly = []
 
-        # 속도 제한 파라미터
-        self.max_v = float(self.get_parameter('max_linear_velocity').value)
-        self.max_w = float(self.get_parameter('max_angular_velocity').value)
-        self.max_a = float(self.get_parameter('max_linear_accel').value)
-        self.max_alpha = float(self.get_parameter('max_angular_accel').value)
+        # 속도 제한 파라미터 캐스팅
+        self.max_v = float(self.get_parameter('max_linear_velocity').value or 0.3)
+        self.max_w = float(self.get_parameter('max_angular_velocity').value or 1.0)
+        self.max_a = float(self.get_parameter('max_linear_accel').value or 0.4)
+        self.max_alpha = float(self.get_parameter('max_angular_accel').value or 2.0)
 
         # 상태
         self.x = self.init_x
@@ -150,8 +164,9 @@ class FakeLidarNode(Node):
         self.yaw = self.init_yaw
         self.v_cmd = 0.0
         self.w_cmd = 0.0
-        self.v_applied = 0.0   # 가속도 제한 적용된 실제 속도
+        self.v_applied = 0.0   
         self.w_applied = 0.0
+        self.v_prev = 0.0
         self.last_cmd_time = self.get_clock().now()
         self.last_int_time = self.get_clock().now()
 
@@ -218,12 +233,13 @@ class FakeLidarNode(Node):
         )
 
     def _setup_virtual_room(self):
-        self.xmin = self.get_parameter('room_x_min').value
-        self.xmax = self.get_parameter('room_x_max').value
-        self.ymin = self.get_parameter('room_y_min').value
-        self.ymax = self.get_parameter('room_y_max').value
+        self.xmin = float(self.get_parameter('room_x_min').value or -5.0)
+        self.xmax = float(self.get_parameter('room_x_max').value or 5.0)
+        self.ymin = float(self.get_parameter('room_y_min').value or -5.0)
+        self.ymax = float(self.get_parameter('room_y_max').value or 5.0)
 
-        obs_flat = list(self.get_parameter('obstacles').value)
+        obs_param = self.get_parameter('obstacles').value
+        obs_flat = list(obs_param) if obs_param is not None else []
         self.obstacles = []
         for i in range(0, len(obs_flat) - 3, 4):
             self.obstacles.append((
@@ -256,7 +272,6 @@ class FakeLidarNode(Node):
             self.force_obstacle_back = False
             self.get_logger().info('✓ 강제 장애물 해제')
         elif cmd == 'teleport':
-            # 현재 위치에서 1m 떨어진 곳으로 점프
             self.x += 1.5
             self.y += 1.5
             self.get_logger().info(f'🚀 위치 점프 → ({self.x:.2f}, {self.y:.2f}) (AMCL 분실 유도)')
@@ -278,17 +293,14 @@ class FakeLidarNode(Node):
             return
         self.last_int_time = now
 
-        # cmd_vel 끊김 시 정지 명령
         if (now - self.last_cmd_time).nanoseconds * 1e-9 > self.cmd_timeout:
             v_target, w_target = 0.0, 0.0
         else:
             v_target, w_target = self.v_cmd, self.w_cmd
 
-        # 속도 캡
         v_target = max(-self.max_v, min(self.max_v, v_target))
         w_target = max(-self.max_w, min(self.max_w, w_target))
 
-        # 가속도 제한 (slew rate)
         max_dv = self.max_a * dt
         max_dw = self.max_alpha * dt
         dv = max(-max_dv, min(max_dv, v_target - self.v_applied))
@@ -296,12 +308,11 @@ class FakeLidarNode(Node):
         self.v_applied += dv
         self.w_applied += dw
 
-        # 적용된 속도로 적분
         self.x += self.v_applied * math.cos(self.yaw) * dt
         self.y += self.v_applied * math.sin(self.yaw) * dt
         self.yaw += self.w_applied * dt
 
-    def raycast_map(self, angle_world):
+    def raycast_map(self, angle_world: float) -> float:
         cos_a = math.cos(angle_world)
         sin_a = math.sin(angle_world)
         step = self.map_resolution * 0.5
@@ -322,7 +333,7 @@ class FakeLidarNode(Node):
                 return self.rmax
         return self.rmax
 
-    def raycast_room(self, angle_world):
+    def raycast_room(self, angle_world: float) -> float:
         cos_a = math.cos(angle_world)
         sin_a = math.sin(angle_world)
         best = self.rmax
@@ -370,8 +381,7 @@ class FakeLidarNode(Node):
                 best = t_enter
         return best
 
-    def _point_in_polygon(self, px, py):
-        """ray-casting 알고리즘. self.extra_poly = [(x,y), ...]"""
+    def _point_in_polygon(self, px: float, py: float) -> bool:
         n = len(self.extra_poly)
         if n < 3:
             return False
@@ -388,13 +398,12 @@ class FakeLidarNode(Node):
             j = i
         return inside
 
-    def raycast_polygon(self, angle_world):
-        """폴리곤 장애물에 ray-march. (없으면 rmax 반환)"""
+    def raycast_polygon(self, angle_world: float) -> float:
         if not self.extra_poly:
             return self.rmax
         cos_a = math.cos(angle_world)
         sin_a = math.sin(angle_world)
-        step = 0.02  # 2cm
+        step = 0.02  
         n_steps = int(self.rmax / step) + 1
         for i in range(1, n_steps + 1):
             t = i * step
@@ -423,8 +432,6 @@ class FakeLidarNode(Node):
         scan.range_max = self.rmax
 
         raycast = self.raycast_map if self.use_map else self.raycast_room
-
-        # 강제 장애물 각도 임계 (±15도)
         force_ang_thresh = math.radians(15.0)
 
         ranges = [0.0] * self.N
@@ -432,15 +439,13 @@ class FakeLidarNode(Node):
             angle_local = scan.angle_min + i * scan.angle_increment
             angle_world = self.yaw + angle_local
 
-            # 강제 장애물 우선
             if self.force_obstacle_front and abs(angle_local) < force_ang_thresh:
                 r = 0.30
             elif self.force_obstacle_back and abs(abs(angle_local) - math.pi) < force_ang_thresh:
                 r = 0.15
             else:
-                # 맵/룸 raycasting과 폴리곤 raycasting 중 더 가까운 쪽
-                r_main = raycast(angle_world)
-                r_poly = self.raycast_polygon(angle_world)
+                r_main = float(raycast(angle_world))
+                r_poly = float(self.raycast_polygon(angle_world))
                 r = min(r_main, r_poly)
 
             r += random.gauss(0.0, self.noise)

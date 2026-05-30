@@ -37,10 +37,6 @@ class LogCollectorNode(Node):
         self.create_new_session()
         self.get_logger().info(f"🟢 [스마트 블랙박스] 링 버퍼 활성화 대기 중...")
         
-        self.get_logger().info(f"🟢 [스마트 블랙박스] 링 버퍼 활성화 대기 중...")
-        
-        self.last_snapshot_time = {}      
-        self.snapshot_cooldown_sec = 30.0
     def create_new_session(self):
         session_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         self.session_filename = f"[주행로그]_{session_time}.json"

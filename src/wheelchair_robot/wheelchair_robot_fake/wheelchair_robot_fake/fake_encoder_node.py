@@ -20,7 +20,7 @@ class FakeEncoderNode(Node):
     def __init__(self):
         super().__init__('fake_encoder_node')
 
-        # ── 파라미터 ────────────────────────────────────────────────────
+        # ── 파라미터 선언 ──────────────────────────────────────────────────
         self.declare_parameter('publish_rate', 30.0)
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'base_footprint')
@@ -33,16 +33,18 @@ class FakeEncoderNode(Node):
         self.declare_parameter('max_linear_accel', 0.4)
         self.declare_parameter('max_angular_accel', 2.0)
 
-        self.rate = self.get_parameter('publish_rate').value
-        self.odom_frame = self.get_parameter('odom_frame').value
-        self.base_frame = self.get_parameter('base_frame').value
-        self.nv = self.get_parameter('noise_std_v').value
-        self.nw = self.get_parameter('noise_std_w').value
-        self.cmd_timeout = self.get_parameter('cmd_timeout').value
-        self.max_v = float(self.get_parameter('max_linear_velocity').value)
-        self.max_w = float(self.get_parameter('max_angular_velocity').value)
-        self.max_a = float(self.get_parameter('max_linear_accel').value)
-        self.max_alpha = float(self.get_parameter('max_angular_accel').value)
+        # ── 파라미터 값 가져오기 및 타입 명시 (Pylance 에러 해결) ──────────────────
+        # .value가 None일 가능성을 차단하기 위해 기본값 백업 및 형변환 처리를 적용합니다.
+        self.rate = float(self.get_parameter('publish_rate').value or 30.0)
+        self.odom_frame = str(self.get_parameter('odom_frame').value or 'odom')
+        self.base_frame = str(self.get_parameter('base_frame').value or 'base_footprint')
+        self.nv = float(self.get_parameter('noise_std_v').value or 0.01)
+        self.nw = float(self.get_parameter('noise_std_w').value or 0.01)
+        self.cmd_timeout = float(self.get_parameter('cmd_timeout').value or 0.5)
+        self.max_v = float(self.get_parameter('max_linear_velocity').value or 0.3)
+        self.max_w = float(self.get_parameter('max_angular_velocity').value or 1.0)
+        self.max_a = float(self.get_parameter('max_linear_accel').value or 0.4)
+        self.max_alpha = float(self.get_parameter('max_angular_accel').value or 2.0)
 
         # ── 상태 ─────────────────────────────────────────────────────
         self.x = 0.0
@@ -58,6 +60,8 @@ class FakeEncoderNode(Node):
         # ── 통신 ─────────────────────────────────────────────────────
         self.create_subscription(Twist, '/cmd_vel', self.cmd_cb, 10)
         self.odom_pub = self.create_publisher(Odometry, '/odom', 10)
+        
+        # self.rate가 명확히 float이 되므로 라인 61번의 나눗셈(/) 연산 오류가 해결됩니다.
         self.create_timer(1.0 / self.rate, self.tick)
 
         self.get_logger().info(
@@ -103,7 +107,7 @@ class FakeEncoderNode(Node):
         self.yaw += w_true * dt
         self.yaw = math.atan2(math.sin(self.yaw), math.cos(self.yaw))
 
-        # 측정값에 노이즈 추가
+        # 측정값에 노이즈 추가 (self.nv, self.nw가 확실한 float이므로 라인 107, 108번 에러가 해결됩니다)
         v_meas = v_true + random.gauss(0.0, self.nv)
         w_meas = w_true + random.gauss(0.0, self.nw)
 

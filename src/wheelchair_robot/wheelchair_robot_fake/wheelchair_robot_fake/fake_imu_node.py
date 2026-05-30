@@ -17,18 +17,20 @@ import random
 
 import rclpy
 from rclpy.node import Node
+from rclpy.duration import Duration  # rclpy 특성 이슈 해결을 위해 명시적 import
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String
 
 
-GRAVITY = 9.81
+GRAVITY = 9.80665
 
 
 class FakeImuNode(Node):
     def __init__(self):
         super().__init__('fake_imu_node')
 
+        # ── 파라미터 선언 ────────────────────────────────────────────────────
         self.declare_parameter('publish_rate', 50.0)
         self.declare_parameter('imu_frame', 'imu_link')
         self.declare_parameter('noise_std_w', 0.005)
@@ -41,16 +43,17 @@ class FakeImuNode(Node):
         self.declare_parameter('max_linear_accel', 0.4)
         self.declare_parameter('max_angular_accel', 2.0)
 
-        self.rate = self.get_parameter('publish_rate').value
-        self.imu_frame = self.get_parameter('imu_frame').value
-        self.nw = self.get_parameter('noise_std_w').value
-        self.na = self.get_parameter('noise_std_a').value
-        self.nyaw = self.get_parameter('noise_std_yaw').value
-        self.cmd_timeout = self.get_parameter('cmd_timeout').value
-        self.max_v = float(self.get_parameter('max_linear_velocity').value)
-        self.max_w = float(self.get_parameter('max_angular_velocity').value)
-        self.max_a = float(self.get_parameter('max_linear_accel').value)
-        self.max_alpha = float(self.get_parameter('max_angular_accel').value)
+        # ── 파라미터 값 가져오기 및 타입 명시 (Pylance 에러 해결) ──────────────────
+        self.rate = float(self.get_parameter('publish_rate').value or 50.0)
+        self.imu_frame = str(self.get_parameter('imu_frame').value or 'imu_link')
+        self.nw = float(self.get_parameter('noise_std_w').value or 0.005)
+        self.na = float(self.get_parameter('noise_std_a').value or 0.05)
+        self.nyaw = float(self.get_parameter('noise_std_yaw').value or 0.005)
+        self.cmd_timeout = float(self.get_parameter('cmd_timeout').value or 0.5)
+        self.max_v = float(self.get_parameter('max_linear_velocity').value or 0.3)
+        self.max_w = float(self.get_parameter('max_angular_velocity').value or 1.0)
+        self.max_a = float(self.get_parameter('max_linear_accel').value or 0.4)
+        self.max_alpha = float(self.get_parameter('max_angular_accel').value or 2.0)
 
         self.yaw = 0.0
         self.v_cmd = 0.0
@@ -69,6 +72,8 @@ class FakeImuNode(Node):
         self.create_subscription(Twist, '/cmd_vel', self.cmd_cb, 10)
         self.create_subscription(String, '/fake/imu_control', self._control_cb, 10)
         self.imu_pub = self.create_publisher(Imu, '/imu/data', 10)
+        
+        # self.rate가 확실한 float이 되므로 라인 72번 부근의 나눗셈 경고가 해결됩니다.
         self.create_timer(1.0 / self.rate, self.tick)
 
         self.get_logger().info(
@@ -90,8 +95,8 @@ class FakeImuNode(Node):
             self.publishing_enabled = True
             self.get_logger().info('✓ IMU 발행 재개')
         elif cmd == 'shock':
-            # 3초 동안 충격 인젝션
-            self.shock_until = now + rclpy.duration.Duration(seconds=3.0)
+            # ── [수정 핵심] 3.0(float) 대신 3(int)으로 변경하여 Pylance 에러 해결 ──
+            self.shock_until = now + Duration(seconds=3)
             self.get_logger().info('💥 IMU 충격 시뮬 (3초)')
         elif cmd == 'tilt':
             self.tilt_active = True
@@ -124,7 +129,7 @@ class FakeImuNode(Node):
         else:
             v_target, w_target = self.v_cmd, self.w_cmd
 
-        # 속도 캡 + 가속도 제한 (다른 fake 노드와 동일)
+        # 속도 캡 + 가속도 제한
         v_target = max(-self.max_v, min(self.max_v, v_target))
         w_target = max(-self.max_w, min(self.max_w, w_target))
         max_dv = self.max_a * dt
@@ -142,6 +147,7 @@ class FakeImuNode(Node):
         ax_true = (v_true - self.v_prev) / dt if dt > 0 else 0.0
         self.v_prev = v_true
 
+        # 타입 가드 컴파일러 대응
         w_meas = w_true + random.gauss(0.0, self.nw)
         ax_meas = ax_true + random.gauss(0.0, self.na)
         ay_meas = random.gauss(0.0, self.na)
