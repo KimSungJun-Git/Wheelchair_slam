@@ -203,24 +203,24 @@ def generate_launch_description():
 
         # ── 7a. mode_switch_node (use_relay=false 일 때만) ────
         # 키 입력은 fake 런치 환경에서 어렵지만 /destination 토픽으로 제어 가능
-        Node(
-            package='wheelchair_robot_control',
-            executable='mode_switch_node',
-            name='mode_switch_node',
-            output='screen',
-            condition=UnlessCondition(use_relay),
-        ),
+        #Node(
+        #    package='wheelchair_robot_control',
+        #    executable='mode_switch_node',
+        #    name='mode_switch_node',
+        #    output='screen',
+        #    condition=UnlessCondition(use_relay),
+        #),
 
         # ── 7b. cmd_vel relay (use_relay=true 일 때만) ────────
         # mode_switch 우회: /cmd_vel_safe → /cmd_vel 직결
-        Node(
-            package='topic_tools',
-            executable='relay',
-            name='cmd_vel_relay',
-            arguments=['/cmd_vel_safe', '/cmd_vel'],
-            output='screen',
-            condition=IfCondition(use_relay),
-        ),
+        #Node(
+        #    package='topic_tools',
+        #    executable='relay',
+        #    name='cmd_vel_relay',
+        #    arguments=['/cmd_vel_safe', '/cmd_vel'],
+        #    output='screen',
+        #    condition=IfCondition(use_relay),
+        #),
 
         # ── 8. localization_monitor_node ──────────────────────
         Node(

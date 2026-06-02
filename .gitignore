@@ -1,12 +1,25 @@
-# 빌드 및 로그 폴더 제외
+# 1. ROS 2 워크스페이스 빌드 및 로그 폴더 제외
 build/
 install/
 log/
 
-# 특정 데이터 폴더 제외
+# 2. 특정 데이터 폴더 및 파일 제외
 #driving_data/
+context.md
+GEMINI.md
+memory.md
 
-.gitignore
-.vscode/
-# 특정 소스 패키지 제외
+# 3. 특정 소스 패키지 제외
 src/wheelchair_core/
+
+# 4. 에디터 설정 폴더 제외
+.vscode/
+
+# 5. Python 캐시 및 빌드 찌꺼기 (추가 권장)
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# 주의: .gitignore와 README.md는 추적해야 하므로 이 목록에서 뺐습니다.
